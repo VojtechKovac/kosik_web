@@ -3,10 +3,14 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 import random
 from datetime import datetime, timedelta
+from passlib.context import CryptContext
 
 app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
+
+# Kontext na bezpečné hashovanie hesiel pre Club Card
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Formát: nazov: (cena, druh, sklad, krajina_pôvodu, miesto_pestovania, značka)
 kategoria = {
@@ -51,8 +55,11 @@ zlavovy_kupon = {
 kosik = {}
 is_admin = False
 
-# Vygenerovanie stálych zliav pre vybrané produkty (napr. 20-30% zľava)
-# Ukladáme formát: { nazov: (akčná_cena, percento_zľavy) }
+# Úložisko pre Club Card zákazníků: { email: hash_hesla }
+klubovi_zakaznici = {}
+prihlaseny_zakaznik = None
+
+# Vygenerovanie stálych zliav pre vybrané produkty
 def generuj_akcie():
     vybrane = ["maslo", "banan", "cokolada", "syr", "coca cola", "jahody", "chlieb"]
     akcie = {}
@@ -64,7 +71,7 @@ def generuj_akcie():
             akcie[p] = (nova_cena, zlava_perc)
     return akcie
 
-# Vygenerujeme náhodné dátumy platnosti letáku (nassledujúcich 7 dní)
+# Vygenerujeme náhodné dátumy platnosti letáku (nasledujúcich 7 dní)
 dnes = datetime.now()
 koniec = dnes + timedelta(days=7)
 datum_od = dnes.strftime("%d.%m.%Y")
@@ -83,13 +90,13 @@ def domov(request: Request):
             "is_admin": is_admin,
             "aktualne_akcie": aktualne_akcie,
             "datum_od": datum_od,
-            "datum_do": datum_do
+            "datum_do": datum_do,
+            "prihlaseny_zakaznik": prihlaseny_zakaznik
         }
     )
 
 @app.get("/letak")
 def zobraz_letak(request: Request):
-    # Vyfiltrujeme položky letáku
     polozky_v_letaku = {k: (kategoria[k], aktualne_akcie[k]) for k in aktualne_akcie if k in kategoria}
     return templates.TemplateResponse(
         request=request,
@@ -114,6 +121,33 @@ def logout():
     global is_admin
     is_admin = False
     return RedirectResponse("/", status_code=303)
+
+# --- KLUB CARD TRASY ---
+@app.post("/register-club-card")
+def register_club_card(email: str = Form(...), heslo: str = Form(...)):
+    global klubovi_zakaznici, prihlaseny_zakaznik
+    email = email.strip().lower()
+    if email and email not in klubovi_zakaznici:
+        hashed_password = pwd_context.hash(heslo)
+        klubovi_zakaznici[email] = hashed_password
+        prihlaseny_zakaznik = email
+    return RedirectResponse("/", status_code=303)
+
+@app.post("/login-club-card")
+def login_club_card(email: str = Form(...), heslo: str = Form(...)):
+    global prihlaseny_zakaznik
+    email = email.strip().lower()
+    if email in klubovi_zakaznici:
+        if pwd_context.verify(heslo, klubovi_zakaznici[email]):
+            prihlaseny_zakaznik = email
+    return RedirectResponse("/", status_code=303)
+
+@app.get("/logout-club-card")
+def logout_club_card():
+    global prihlaseny_zakaznik
+    prihlaseny_zakaznik = None
+    return RedirectResponse("/", status_code=303)
+# ----------------------
 
 @app.post("/dozaskladnit")
 def dozaskladnit(polozka: str = Form(...), pocet: int = Form(...)):
@@ -159,10 +193,7 @@ def vymazat_vsetko():
 @app.post("/pridat")
 def pridat(polozka: str = Form(...), mnozstvo: int = Form(...)):
     if polozka in kategoria:
-        # Ak má produkt zľavu, pridáme do košíka akčnú cenu, inak bežnú
-        cena_za_ks = aktualne_akcie[polozka][0] if polozka in aktualne_akcie else kategoria[polozka][0]
         cena, druh, sklad, povod, miesto, znacka = kategoria[polozka]
-        
         if mnozstvo > 0 and mnozstvo <= sklad:
             if polozka in kosik:
                 kosik[polozka] += mnozstvo
@@ -195,7 +226,6 @@ def upravit(polozka: str = Form(...), akcia: str = Form(...)):
 def zobraz_kosik(request: Request):
     celkova_cena = 0
     for polozka, mnozstvo in kosik.items():
-        # Použijeme akčnú cenu ak existuje
         cena = aktualne_akcie[polozka][0] if polozka in aktualne_akcie else kategoria[polozka][0]
         celkova_cena += cena * mnozstvo
 

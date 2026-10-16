@@ -135,6 +135,76 @@
             font-size: 17px;
         }
 
+        .club-card-box {
+            background: white;
+            border-radius: 16px;
+            padding: 20px 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+            border: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .club-card-box h3 {
+            font-size: 18px;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+
+        .club-card-box p {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .club-forms {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .club-form {
+            display: flex;
+            gap: 6px;
+        }
+
+        .club-form input {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .club-btn-reg {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .club-btn-reg:hover {
+            background: #1d4ed8;
+        }
+
+        .club-btn-log {
+            background: #16a34a;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .club-btn-log:hover {
+            background: #15803d;
+        }
+
         .admin-new-product {
             background: #fff5f5;
             border: 2px dashed #f87171;
@@ -520,6 +590,40 @@
         <h2>Vitaj v mojom obchode 👋</h2>
         <p>Pozri si náš akčný leták platný od <strong>{{ datum_od }}</strong> do <strong>{{ datum_do }}</strong> a využi skvelé zľavy!</p>
     </section>
+
+    <!-- CLUB CARD SEKCIA -->
+    <div class="club-card-box">
+        <div>
+            <h3>💳 Vernostný program Club Card</h3>
+            {% if prihlaseny_zakaznik %}
+                <p>Prihlásený člen: <strong style="color: #16a34a;">{{ prihlaseny_zakaznik }}</strong></p>
+            {% else %}
+                <p>Zaregistruj sa alebo sa prihlás so svojím reálnym emailom.</p>
+            {% endif %}
+        </div>
+
+        <div>
+            {% if prihlaseny_zakaznik %}
+                <a href="/logout-club-card" style="background: #ef4444; color: white; padding: 10px 16px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">Odhlásiť Club Card</a>
+            {% else %}
+                <div class="club-forms">
+                    <!-- Registrácia -->
+                    <form action="/register-club-card" method="post" class="club-form">
+                        <input type="email" name="email" placeholder="Tvoj email" required>
+                        <input type="password" name="heslo" placeholder="Heslo" required>
+                        <button type="submit" class="club-btn-reg">Založiť kartu</button>
+                    </form>
+
+                    <!-- Prihlásenie -->
+                    <form action="/login-club-card" method="post" class="club-form">
+                        <input type="email" name="email" placeholder="Email" required>
+                        <input type="password" name="heslo" placeholder="Heslo" required>
+                        <button type="submit" class="club-btn-log">Prihlásiť</button>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
 
     {% if is_admin %}
     <div class="admin-new-product">
