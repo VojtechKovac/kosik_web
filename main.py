@@ -55,7 +55,7 @@ zlavovy_kupon = {
 kosik = {}
 is_admin = False
 
-# Úložisko pre Club Card zákazníkov a ich body
+# Globálne úložiská pre Club Card
 klubovi_zakaznici = {}  # { email: hash_hesla }
 klubove_body = {}       # { email: pocet_bodov }
 prihlaseny_zakaznik = None
@@ -131,7 +131,7 @@ def register_club_card(email: str = Form(...), heslo: str = Form(...)):
     if email and email not in klubovi_zakaznici:
         hashed_password = pwd_context.hash(heslo)
         klubovi_zakaznici[email] = hashed_password
-        klubove_body[email] = 0  # Inicializácia bodov na 0
+        klubove_body[email] = 0
         prihlaseny_zakaznik = email
     return RedirectResponse("/", status_code=303)
 
@@ -157,7 +157,6 @@ def uplatnit_body():
         body = klubove_body.get(prihlaseny_zakaznik, 0)
         if body >= 100:
             klubove_body[prihlaseny_zakaznik] = body - 100
-            # Môžeš tu prípadne pridať logiku pre bonusovú zľavu
     return RedirectResponse("/", status_code=303)
 # ----------------------
 
@@ -265,7 +264,6 @@ def zaplatit(request: Request, kupon: str = Form("")):
         celkova_cena += cena * mnozstvo
         celkovo_kusov += mnozstvo
 
-    # Pripočítanie vernostných bodov prihlásenému zákazníkovi (1 produkt = 1 bod)
     if prihlaseny_zakaznik and celkovo_kusov > 0:
         aktualne_body = klubove_body.get(prihlaseny_zakaznik, 0)
         klubove_body[prihlaseny_zakaznik] = aktualne_body + celkovo_kusov
