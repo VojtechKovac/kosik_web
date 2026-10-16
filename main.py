@@ -55,8 +55,9 @@ zlavovy_kupon = {
 kosik = {}
 is_admin = False
 
-# Úložisko pre Club Card zákazníků: { email: hash_hesla }
-klubovi_zakaznici = {}
+# Úložisko pre Club Card zákazníkov a ich body
+klubovi_zakaznici = {}  # { email: hash_hesla }
+klubove_body = {}       # { email: pocet_bodov }
 prihlaseny_zakaznik = None
 
 # Vygenerovanie stálych zliav pre vybrané produkty
@@ -71,7 +72,6 @@ def generuj_akcie():
             akcie[p] = (nova_cena, zlava_perc)
     return akcie
 
-# Vygenerujeme náhodné dátumy platnosti letáku (nasledujúcich 7 dní)
 dnes = datetime.now()
 koniec = dnes + timedelta(days=7)
 datum_od = dnes.strftime("%d.%m.%Y")
@@ -91,7 +91,8 @@ def domov(request: Request):
             "aktualne_akcie": aktualne_akcie,
             "datum_od": datum_od,
             "datum_do": datum_do,
-            "prihlaseny_zakaznik": prihlaseny_zakaznik
+            "prihlaseny_zakaznik": prihlaseny_zakaznik,
+            "klubove_body": klubove_body
         }
     )
 
@@ -125,11 +126,12 @@ def logout():
 # --- KLUB CARD TRASY ---
 @app.post("/register-club-card")
 def register_club_card(email: str = Form(...), heslo: str = Form(...)):
-    global klubovi_zakaznici, prihlaseny_zakaznik
+    global klubovi_zakaznici, klubove_body, prihlaseny_zakaznik
     email = email.strip().lower()
     if email and email not in klubovi_zakaznici:
         hashed_password = pwd_context.hash(heslo)
         klubovi_zakaznici[email] = hashed_password
+        klubove_body[email] = 0  # Inicializácia bodov na 0
         prihlaseny_zakaznik = email
     return RedirectResponse("/", status_code=303)
 
@@ -146,6 +148,16 @@ def login_club_card(email: str = Form(...), heslo: str = Form(...)):
 def logout_club_card():
     global prihlaseny_zakaznik
     prihlaseny_zakaznik = None
+    return RedirectResponse("/", status_code=303)
+
+@app.post("/uplatnit-body")
+def uplatnit_body():
+    global prihlaseny_zakaznik, klubove_body
+    if prihlaseny_zakaznik:
+        body = klubove_body.get(prihlaseny_zakaznik, 0)
+        if body >= 100:
+            klubove_body[prihlaseny_zakaznik] = body - 100
+            # Môžeš tu prípadne pridať logiku pre bonusovú zľavu
     return RedirectResponse("/", status_code=303)
 # ----------------------
 
@@ -243,10 +255,20 @@ def zobraz_kosik(request: Request):
 
 @app.post("/zaplatit")
 def zaplatit(request: Request, kupon: str = Form("")):
+    global prihlaseny_zakaznik, klubove_body
+    
     celkova_cena = 0
+    celkovo_kusov = 0
+    
     for polozka, mnozstvo in kosik.items():
         cena = aktualne_akcie[polozka][0] if polozka in aktualne_akcie else kategoria[polozka][0]
         celkova_cena += cena * mnozstvo
+        celkovo_kusov += mnozstvo
+
+    # Pripočítanie vernostných bodov prihlásenému zákazníkovi (1 produkt = 1 bod)
+    if prihlaseny_zakaznik and celkovo_kusov > 0:
+        aktualne_body = klubove_body.get(prihlaseny_zakaznik, 0)
+        klubove_body[prihlaseny_zakaznik] = aktualne_body + celkovo_kusov
 
     zlava = 0
     if kupon in zlavovy_kupon:

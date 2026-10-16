@@ -597,14 +597,22 @@
             <h3>💳 Vernostný program Club Card</h3>
             {% if prihlaseny_zakaznik %}
                 <p>Prihlásený člen: <strong style="color: #16a34a;">{{ prihlaseny_zakaznik }}</strong></p>
+                <p style="margin-top: 5px;">⭐ Tvoje body: <strong>{{ klubove_body.get(prihlaseny_zakaznik, 0) }} bodov</strong> (Za 100 bodov zľava 5 €)</p>
             {% else %}
-                <p>Zaregistruj sa alebo sa prihlás so svojím reálnym emailom.</p>
+                <p>Zaregistruj sa a zbieraj body za každý nákup (1 produkt = 1 bod)!</p>
             {% endif %}
         </div>
 
         <div>
             {% if prihlaseny_zakaznik %}
-                <a href="/logout-club-card" style="background: #ef4444; color: white; padding: 10px 16px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">Odhlásiť Club Card</a>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    {% if klubove_body.get(prihlaseny_zakaznik, 0) >= 100 %}
+                        <form action="/uplatnit-body" method="post">
+                            <button type="submit" style="background: #f59e0b; color: white; padding: 10px 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">🎁 Vymeniť 100 bodov za zľavu 5€</button>
+                        </form>
+                    {% endif %}
+                    <a href="/logout-club-card" style="background: #ef4444; color: white; padding: 10px 16px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px; display: inline-block;">Odhlásiť</a>
+                </div>
             {% else %}
                 <div class="club-forms">
                     <!-- Registrácia -->
