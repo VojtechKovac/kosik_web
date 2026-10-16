@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akčný leták</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f0f4f8;
+            color: #1f2937;
+        }
+
+        header {
+            background: #111827;
+            color: white;
+            padding: 20px 7%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 26px;
+        }
+
+        .back {
+            color: white;
+            text-decoration: none;
+            background: #374151;
+            padding: 10px 16px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .back:hover {
+            background: #4b5563;
+        }
+
+        main {
+            width: 86%;
+            max-width: 1000px;
+            margin: 40px auto;
+        }
+
+        .flyer-banner {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            padding: 35px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
+        }
+
+        .flyer-banner h2 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .flyer-banner p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .flyer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+        }
+
+        .flyer-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            position: relative;
+            border: 2px solid #fee2e2;
+        }
+
+        .discount-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #ef4444;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .flyer-card h3 {
+            font-size: 22px;
+            margin-bottom: 10px;
+            text-transform: capitalize;
+        }
+
+        .old-price {
+            text-decoration: line-through;
+            color: #9ca3af;
+            font-size: 16px;
+            margin-right: 8px;
+        }
+
+        .new-price {
+            color: #dc2626;
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🔥 Týždenný akčný leták</h1>
+    <a href="/" class="back">← Späť do obchodu</a>
+</header>
+
+<main>
+    <div class="flyer-banner">
+        <h2>Super zľavy pre tento týždeň!</h2>
+        <p>📅 Platnosť letáku: <strong>{{ datum_od }}</strong> až <strong>{{ datum_do }}</strong></p>
+    </div>
+
+    <div class="flyer-grid">
+        {% for nazov, data in polozky_v_letaku.items() %}
+        {% set udaje = data[0] %}
+        {% set akcia = data[1] %}
+        
+        <div class="flyer-card">
+            <div class="discount-badge">-{{ akcia[1] }}%</div>
+            <h3>{{ nazov }}</h3>
+            <p style="color: #6b7280; font-size: 13px; margin-bottom: 15px;">Značka: {{ udaje[5] }}</p>
+            <div>
+                <span class="old-price">{{ "%.2f"|format(udaje[0]) }} €</span>
+                <span class="new-price">{{ "%.2f"|format(akcia[0]) }} €</span>
+            </div>
+            <a href="/" class="back" style="display:inline-block; margin-top: 10px; font-size: 14px; padding: 8px 14px;">Kúpiť v obchode</a>
+        </div>
+        {% endfor %}
+    </div>
+</main>
+
+</body>
+</html>
