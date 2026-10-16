@@ -3,14 +3,10 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 import random
 from datetime import datetime, timedelta
-from passlib.context import CryptContext
 
 app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
-
-# Kontext na bezpečné hashovanie hesiel pre Club Card
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Formát: nazov: (cena, druh, sklad, krajina_pôvodu, miesto_pestovania, značka)
 kategoria = {
@@ -56,11 +52,10 @@ kosik = {}
 is_admin = False
 
 # Globálne úložiská pre Club Card
-klubovi_zakaznici = {}  # { email: hash_hesla }
+klubovi_zakaznici = {}  # { email: heslo }
 klubove_body = {}       # { email: pocet_bodov }
 prihlaseny_zakaznik = None
 
-# Vygenerovanie stálych zliav pre vybrané produkty
 def generuj_akcie():
     vybrane = ["maslo", "banan", "cokolada", "syr", "coca cola", "jahody", "chlieb"]
     akcie = {}
@@ -129,8 +124,7 @@ def register_club_card(email: str = Form(...), heslo: str = Form(...)):
     global klubovi_zakaznici, klubove_body, prihlaseny_zakaznik
     email = email.strip().lower()
     if email and email not in klubovi_zakaznici:
-        hashed_password = pwd_context.hash(heslo)
-        klubovi_zakaznici[email] = hashed_password
+        klubovi_zakaznici[email] = heslo
         klubove_body[email] = 0
         prihlaseny_zakaznik = email
     return RedirectResponse("/", status_code=303)
@@ -140,7 +134,7 @@ def login_club_card(email: str = Form(...), heslo: str = Form(...)):
     global prihlaseny_zakaznik
     email = email.strip().lower()
     if email in klubovi_zakaznici:
-        if pwd_context.verify(heslo, klubovi_zakaznici[email]):
+        if klubovi_zakaznici[email] == heslo:
             prihlaseny_zakaznik = email
     return RedirectResponse("/", status_code=303)
 
