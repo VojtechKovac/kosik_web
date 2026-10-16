@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 import random
@@ -9,11 +9,9 @@ app = FastAPI()
 
 templates = Jinja2Templates(directory="templates")
 
-# Súbory na trvalé ukladanie údajov (aby si to pamätalo aj po reštarte / z iného zariadenia)
 UZIVATELIA_FILE = "uzivatelia.txt"
 BODY_FILE = "body.txt"
 
-# Pomocné funkcie na čítanie a zápis do súborov
 def nacitaj_uzivatelov():
     uzivatelia = {}
     if os.path.exists(UZIVATELIA_FILE):
@@ -43,8 +41,6 @@ def uloz_body_db(body_dict):
         for email, body in body_dict.items():
             f.write(f"{email};{body}\n")
 
-
-# Formát: nazov: (cena, druh, sklad, krajina_pôvodu, miesto_pestovania, značka)
 kategoria = {
     "cukor": (0.6, "iné", 8, "Slovensko", "Trnava", "Slovlik s.r.o."),
     "maslo": (1.5, "iné", 50, "Česko", "Jižní Morava", "Madeta"),
@@ -86,7 +82,6 @@ zlavovy_kupon = {
 
 kosik = {}
 is_admin = False
-prihlaseny_zakaznik = None
 
 def generuj_akcie():
     vybrane = ["maslo", "banan", "cokolada", "syr", "coca cola", "jahody", "chlieb"]
@@ -108,8 +103,10 @@ aktualne_akcie = generuj_akcie()
 
 @app.get("/")
 def domov(request: Request):
-    klubovi_zakaznici = nacitaj_uzivatelov()
+    # Prečítame prihláseného zákazníka z cookie tohto konkrétneho prehliadača
+    prihlaseny_zakaznik = request.cookies.get("prihlaseny_zakaznik")
     klubove_body = nacitaj_body()
+    
     return templates.TemplateResponse(
         request=request,
         name="index.html",
@@ -152,41 +149,45 @@ def logout():
     is_admin = False
     return RedirectResponse("/", status_code=303)
 
-# --- KLUB CARD TRASY (S TRVALÝM UKLADANÍM) ---
+# --- KLUB CARD TRASY (S COOKIES PRE KAŽDÉHO ZARIADENIE ZVLÁŠŤ) ---
 @app.post("/register-club-card")
 def register_club_card(email: str = Form(...), heslo: str = Form(...)):
-    global prihlaseny_zakaznik
     email = email.strip().lower()
     uzivatelia = nacitaj_uzivatelov()
     body_dict = nacitaj_body()
 
+    response = RedirectResponse("/", status_code=303)
     if email and email not in uzivatelia:
         uloz_uzivatela(email, heslo)
         body_dict[email] = 0
         uloz_body_db(body_dict)
-        prihlaseny_zakaznik = email
-    return RedirectResponse("/", status_code=303)
+    
+    # Nastavíme cookie pre tento konkrétny prehliadač
+    response.set_cookie(key="prihlaseny_zakaznik", value=email)
+    return response
 
 @app.post("/login-club-card")
 def login_club_card(email: str = Form(...), heslo: str = Form(...)):
-    global prihlaseny_zakaznik
     email = email.strip().lower()
     uzivatelia = nacitaj_uzivatelov()
 
+    response = RedirectResponse("/", status_code=303)
     if email in uzivatelia:
         if uzivatelia[email] == heslo:
-            prihlaseny_zakaznik = email
-    return RedirectResponse("/", status_code=303)
+            # Nastavíme cookie len pre toto zariadenie
+            response.set_cookie(key="prihlaseny_zakaznik", value=email)
+    return response
 
 @app.get("/logout-club-card")
 def logout_club_card():
-    global prihlaseny_zakaznik
-    prihlaseny_zakaznik = None
-    return RedirectResponse("/", status_code=303)
+    response = RedirectResponse("/", status_code=303)
+    # Vymažeme cookie pre toto zariadenie
+    response.delete_cookie(key="prihlaseny_zakaznik")
+    return response
 
 @app.post("/uplatnit-body")
-def uplatnit_body():
-    global prihlaseny_zakaznik
+def uplatnit_body(request: Request):
+    prihlaseny_zakaznik = request.cookies.get("prihlaseny_zakaznik")
     if prihlaseny_zakaznik:
         body_dict = nacitaj_body()
         body = body_dict.get(prihlaseny_zakaznik, 0)
@@ -290,7 +291,7 @@ def zobraz_kosik(request: Request):
 
 @app.post("/zaplatit")
 def zaplatit(request: Request, kupon: str = Form("")):
-    global prihlaseny_zakaznik
+    prihlaseny_zakaznik = request.cookies.get("prihlaseny_zakaznik")
     
     celkova_cena = 0
     celkovo_kusov = 0
@@ -300,7 +301,6 @@ def zaplatit(request: Request, kupon: str = Form("")):
         celkova_cena += cena * mnozstvo
         celkovo_kusov += mnozstvo
 
-    # Ak je zákazník prihlásený, pripočítame mu body a uložíme do súboru
     if prihlaseny_zakaznik and celkovo_kusov > 0:
         body_dict = nacitaj_body()
         aktualne_body = body_dict.get(prihlaseny_zakaznik, 0)
