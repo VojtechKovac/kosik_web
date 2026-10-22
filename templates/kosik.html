@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Môj košík</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        header {
+            background: #111827;
+            color: white;
+            padding: 22px 7%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+        }
+
+        .back {
+            color: white;
+            text-decoration: none;
+            background: #374151;
+            padding: 10px 16px;
+            border-radius: 8px;
+        }
+
+        main {
+            width: 86%;
+            max-width: 1000px;
+            margin: 40px auto;
+        }
+
+        .box {
+            background: white;
+            padding: 30px;
+            border-radius: 18px;
+            box-shadow: 0 5px 18px rgba(0,0,0,0.07);
+            margin-bottom: 25px;
+        }
+
+        .item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .item-name {
+            font-size: 19px;
+            font-weight: bold;
+        }
+
+        .quantity {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .item-price {
+            font-size: 20px;
+            font-weight: bold;
+            color: #16a34a;
+        }
+
+        .total {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .total-price {
+            color: #16a34a;
+        }
+
+        .coupon {
+            display: flex;
+            gap: 10px;
+        }
+
+        .coupon input {
+            flex: 1;
+            padding: 13px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 13px 20px;
+            background: #22c55e;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #16a34a;
+        }
+
+        .pay {
+            width: 100%;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>🛒 Môj košík</h1>
+
+    <a href="/" class="back">
+        ← Späť do obchodu
+    </a>
+</header>
+
+<main>
+
+    {% if kosik %}
+
+    <div class="box">
+
+        <h2>📦 Tvoje produkty</h2>
+
+        {% for polozka, mnozstvo in kosik.items() %}
+
+        <div class="item">
+
+            <div>
+                <div class="item-name">
+                    {{ polozka }}
+                </div>
+
+                <div class="quantity">
+                    Množstvo: {{ mnozstvo }} ks
+                </div>
+            </div>
+
+            <div class="item-price">
+                {{ "%.2f"|format(kategoria[polozka][0] * mnozstvo) }} €
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+        <div class="total">
+            <span>Celkom:</span>
+
+            <span class="total-price">
+                {{ "%.2f"|format(celkova_cena) }} €
+            </span>
+        </div>
+
+    </div>
+
+    <div class="box">
+
+        <h2>🎟️ Zľavový kupón</h2>
+
+        <form action="/zaplatit" method="post">
+
+            <div class="coupon">
+
+                <input
+                    type="text"
+                    name="kupon"
+                    placeholder="Zadaj kód kupónu"
+                >
+
+                <button type="submit">
+                    Použiť
+                </button>
+
+            </div>
+
+            <button type="submit" class="pay">
+                💳 Zaplatiť
+            </button>
+
+        </form>
+
+    </div>
+
+    {% else %}
+
+    <div class="box empty">
+
+        <h2>🛒 Košík je prázdny</h2>
+
+        <p>Zatiaľ si si nevybral žiadny produkt.</p>
+
+        <br>
+
+        <a href="/" class="back">
+            🛍️ Späť do obchodu
+        </a>
+
+    </div>
+
+    {% endif %}
+
+</main>
+
+</body>
+</html>

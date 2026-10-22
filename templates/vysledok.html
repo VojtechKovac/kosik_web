@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Objednávka úspešná</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .success-box {
+            background: white;
+            width: 90%;
+            max-width: 550px;
+            padding: 50px 35px;
+            border-radius: 25px;
+            text-align: center;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.12);
+        }
+
+        .check {
+            width: 90px;
+            height: 90px;
+            background: #22c55e;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 25px;
+            font-size: 50px;
+        }
+
+        h1 {
+            color: #16a34a;
+            margin-bottom: 12px;
+        }
+
+        .message {
+            color: #666;
+            font-size: 17px;
+            margin-bottom: 30px;
+        }
+
+        .price-box {
+            background: #f0fdf4;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .price-label {
+            color: #666;
+            font-size: 15px;
+        }
+
+        .price {
+            font-size: 36px;
+            font-weight: bold;
+            color: #16a34a;
+            margin-top: 5px;
+        }
+
+        .discount {
+            color: #16a34a;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .shop-button {
+            display: block;
+            text-decoration: none;
+            background: #111827;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 17px;
+            font-weight: bold;
+        }
+
+        .shop-button:hover {
+            background: #374151;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="success-box">
+
+    <div class="check">
+        ✓
+    </div>
+
+    <h1>Objednávka úspešná!</h1>
+
+    <p class="message">
+        Ďakujeme za váš nákup. Vaša objednávka bola úspešne zaplatená.
+    </p>
+
+    <div class="price-box">
+
+        <div class="price-label">
+            Zaplatili ste
+        </div>
+
+        <div class="price">
+            {{ "%.2f"|format(cena_po_zlave) }} €
+        </div>
+
+        {% if zlava > 0 %}
+        <div class="discount">
+            🎟️ Uplatnená zľava: {{ zlava }} %
+        </div>
+        {% endif %}
+
+    </div>
+
+    <a href="/" class="shop-button">
+        🛍️ Späť do obchodu
+    </a>
+
+</div>
+
+</body>
+</html>
