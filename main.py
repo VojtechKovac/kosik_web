@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form, Response
+from fastapi import FastAPI, Request, Form, Response, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 import random
@@ -305,6 +305,11 @@ def pridat_produkt(
     znacka: str = Form("Môj Obchod")
 ):
     is_admin = request.cookies.get("is_admin") == "True"
+    
+    # Bezpečnostná kontrola vstupov (blokovanie HTML/XSS pokusov)
+    if "<" in nazov or ">" in nazov or "<" in druh or ">" in druh:
+        raise HTTPException(status_code=400, detail="Vstupy nemôžu obsahovať HTML značky!")
+
     clean_nazov = nazov.strip().lower()
     if is_admin and clean_nazov:
         db = SessionLocal()
