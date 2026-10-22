@@ -4,12 +4,14 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 # URL k databáze (Render ti ju poskytne cez environmentálnu premennú DATABASE_URL)
-# Pre lokálne testovanie si môžeš vytvoriť lokálnu SQLite databázu
+# Pre lokálne testovanie sa použije lokálna SQLite databáza
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./obchod.db")
 
-# Oprava pre niektoré verzie Render PostgreSQL URL (ak začína s postgres://, zmeníme na postgresql://)
+# Úprava pre Render PostgreSQL URL, aby explicitly použilo psycopg2 ovládač
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
