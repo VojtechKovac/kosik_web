@@ -11,6 +11,17 @@ from database import SessionLocal, ProduktModel, init_db
 
 app = FastAPI()
 
+# ==========================================
+# BEZPEČNOSTNÉ HLAVIČKY (Ochrana pred útokmi)
+# ==========================================
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    return response
+
 templates = Jinja2Templates(directory="templates")
 
 UZIVATELIA_FILE = "uzivatelia.txt"
@@ -100,7 +111,6 @@ koniec = dnes + timedelta(days=7)
 datum_od = dnes.strftime("%d.%m.%Y")
 datum_do = koniec.strftime("%d.%m.%Y")
 
-# Pomocná funkcia pre správu košíka danej relácie
 def daj_kosik_pre_session(request: Request, response: Response):
     session_id = request.cookies.get("session_id")
     if not session_id:
