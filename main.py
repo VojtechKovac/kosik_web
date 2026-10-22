@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import os
 import uuid
 
-# Import z nášho nového súboru database.py
+# Import z nášho súboru database.py
 from database import SessionLocal, ProduktModel, init_db
 
 app = FastAPI()
@@ -152,7 +152,6 @@ def domov(request: Request):
     klubove_body = nacitaj_body()
     is_admin = request.cookies.get("is_admin") == "True"
 
-    # Prevod databázových modelov na slovník, aby to HTML šablóna nemusela meniť
     produkty_db = db.query(ProduktModel).all()
     kategoria_dict = {
         p.nazov: (p.cena, p.druh, p.sklad, p.povod, p.miesto, p.znacka) 
@@ -240,7 +239,6 @@ def register_club_card(request: Request, email: str = Form(...), heslo: str = Fo
 def login_club_card(request: Request, email: str = Form(...), heslo: str = Form(...)):
     email = email.strip().lower()
     uzivatelia = nacitaj_uzivatelov()
-
     response = RedirectResponse("/", status_code=303)
     if email in uzivatelia and uzivatelia[email] == heslo:
         session_id = request.cookies.get("session_id")
@@ -430,3 +428,34 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
     db = SessionLocal()
     aktualne_akcie = generuj_akcie(db)
     produkty_db = db.query(ProduktModel).all()
+    kategoria_dict = {
+        p.nazov: (p.cena, p.druh, p.sklad, p.povod, p.miesto, p.znacka) 
+        for p in produkty_db
+    }
+    
+    celkova_cena = 0
+    for polozka, mnozstvo in kosik.items():
+        if polozka in kategoria_dict:
+            cena = aktualne_akcie[polozka][0] if polozka in aktualne_akcie else kategoria_dict[polozka][0]
+            celkova_cena += cena * mnozstvo
+
+    zlava = zlavovy_kupon.get(kupon.strip(), 0)
+    if zlava > 0:
+        celkova_cena = celkova_cena * (1 - zlava / 100)
+
+    if prihlaseny_zakaznik:
+        body_dict = nacitaj_body()
+        ziskane_body = int(celkova_cena)
+        body_dict[prihlaseny_zakaznik] = body_dict.get(prihlaseny_zakaznik, 0) + ziskane_body
+        uloz_body_db(body_dict)
+
+    db.close()
+    
+    # Vyprázdnenie košíka po nákupe
+    kosik.clear()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="platba_uspesna.html",
+        context={"request": request, "celkova_cena": round(celkova_cena, 2)}
+    )
