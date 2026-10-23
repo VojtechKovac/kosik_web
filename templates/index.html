@@ -586,6 +586,14 @@
 
 <main>
 
+    <!-- NOTIFIKAČNÁ SPRÁVA (FLASH MESSAGE) -->
+    {% if sprava %}
+        <div style="background-color: #dcfce7; color: #166534; padding: 14px 20px; border-radius: 14px; margin-bottom: 25px; border: 1px solid #bbf7d0; font-weight: 500; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+            <span style="font-size: 18px;">🔔</span>
+            <div>{{ sprava }}</div>
+        </div>
+    {% endif %}
+
     <section class="welcome">
         <h2>Vitaj v mojom obchode 👋</h2>
         <p>Pozri si náš akčný leták platný od <strong>{{ datum_od }}</strong> do <strong>{{ datum_do }}</strong> a využi skvelé zľavy!</p>
