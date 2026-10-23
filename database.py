@@ -40,6 +40,17 @@ class ObjednavkaModel(Base):
     celkova_cena = Column(Float, nullable=False)
     datum = Column(DateTime, default=datetime.utcnow)
 
+# Definícia tabuľky pre recenzie a hodnotenia produktov
+class RecenziaModel(Base):
+    __tablename__ = "recenzie"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    produkt_nazov = Column(String, nullable=False, index=True)
+    hodnotenie = Column(Integer, nullable=False)  # Číslo od 1 do 5
+    komentar = Column(String, nullable=True)
+    autor = Column(String, default="Anonymný zákazník")
+    datum = Column(DateTime, default=datetime.utcnow)
+
 # Vytvorenie tabuliek v databáze
 def init_db():
     Base.metadata.create_all(bind=engine)

@@ -835,6 +835,34 @@
                     <div class="empty">Vypredané</div>
                 {% endif %}
 
+                <!-- HVIEZDIČKOVÉ HODNOTENIE A RECENZIE -->
+                <div style="margin-top: 12px; font-size: 13px; border-top: 1px solid #f3f4f6; padding-top: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                        <span>
+                            ⭐ 
+                            {% if nazov in priemer_hodnoteni %}
+                                <strong>{{ priemer_hodnoteni[nazov] }}</strong> / 5 ({{ recenzie_dict[nazov]|length }} recenzií)
+                            {% else %}
+                                <em>Zatiaľ bez hodnotenia</em>
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <!-- Formulár na pridanie recenzie -->
+                    <form action="/pridat-recenziu" method="post" style="display: flex; gap: 4px; margin-top: 6px;">
+                        <input type="hidden" name="produkt" value="{{ nazov }}">
+                        <select name="hodnotenie" style="padding: 4px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 12px;">
+                            <option value="5">⭐⭐⭐⭐⭐ (5)</option>
+                            <option value="4">⭐⭐⭐⭐ (4)</option>
+                            <option value="3">⭐⭐⭐ (3)</option>
+                            <option value="2">⭐⭐ (2)</option>
+                            <option value="1">⭐ (1)</option>
+                        </select>
+                        <input type="text" name="komentar" placeholder="Krátky komentár..." style="padding: 4px 8px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 12px; flex: 1; width: auto;" required>
+                        <button type="submit" style="padding: 4px 8px; font-size: 12px; border-radius: 6px;">Odoslať</button>
+                    </form>
+                </div>
+
                 {% if is_admin %}
                 <div class="admin-restock-box">
                     <form action="/dozaskladnit" method="post">

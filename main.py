@@ -7,8 +7,8 @@ import os
 import uuid
 from urllib.parse import quote
 
-# Import z nášho súboru database.py (pridaný ObjednavkaModel)
-from database import SessionLocal, ProduktModel, ObjednavkaModel, init_db
+# Import z nášho súboru database.py (pridaný RecenziaModel)
+from database import SessionLocal, ProduktModel, ObjednavkaModel, RecenziaModel, init_db
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -166,6 +166,19 @@ def domov(request: Request, sprava: str = None):
     if is_admin:
         zoznam_objednavok = db.query(ObjednavkaModel).order_by(ObjednavkaModel.datum.desc()).all()
         
+    # Načítanie recenzií a výpočet priemerných hodnotení
+    vsetky_recenzie = db.query(RecenziaModel).all()
+    recenzie_dict = {}
+    priemer_hodnoteni = {}
+    
+    for r in vsetky_recenzie:
+        if r.produkt_nazov not in recenzie_dict:
+            recenzie_dict[r.produkt_nazov] = []
+        recenzie_dict[r.produkt_nazov].append(r)
+        
+    for nazov, recs in recenzie_dict.items():
+        priemer_hodnoteni[nazov] = round(sum(r.hodnotenie for r in recs) / len(recs), 1)
+
     db.close()
     
     response = templates.TemplateResponse(
@@ -181,6 +194,8 @@ def domov(request: Request, sprava: str = None):
             "klubove_body": klubove_body,
             "sprava": sprava,
             "zoznam_objednavok": zoznam_objednavok,
+            "recenzie_dict": recenzie_dict,
+            "priemer_hodnoteni": priemer_hodnoteni,
             "request": request
         }
     )
@@ -515,3 +530,22 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
         name="platba_uspesna.html",
         context={"request": request, "celkova_cena": round(celkova_cena, 2)}
     )
+
+# ENDPOINT PRE PRIDANIE RECENZIE
+@app.post("/pridat-recenziu")
+def pridat_recenziu(request: Request, produkt: str = Form(...), hodnotenie: int = Form(...), komentar: str = Form("")):
+    session_id = request.cookies.get("session_id")
+    prihlaseny_zakaznik = aktivne_relacie.get(session_id) if session_id else None
+    
+    db = SessionLocal()
+    nova_recenzia = RecenziaModel(
+        produkt_nazov=produkt,
+        hodnotenie=max(1, min(5, hodnotenie)),
+        komentar=komentar.strip(),
+        autor=prihlaseny_zakaznik if prihlaseny_zakaznik else "Anonymný zákazník"
+    )
+    db.add(nova_recenzia)
+    db.commit()
+    db.close()
+    
+    return RedirectResponse(f"/?sprava={quote('Ďakujeme za tvoje hodnotenie!')}", status_code=303)
