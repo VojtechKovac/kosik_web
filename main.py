@@ -7,8 +7,8 @@ import os
 import uuid
 from urllib.parse import quote
 
-# Import z nášho súboru database.py
-from database import SessionLocal, ProduktModel, init_db
+# Import z nášho súboru database.py (pridaný ObjednavkaModel)
+from database import SessionLocal, ProduktModel, ObjednavkaModel, init_db
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -160,6 +160,12 @@ def domov(request: Request, sprava: str = None):
         p.nazov: (p.cena, p.druh, p.sklad, p.povod, p.miesto, p.znacka) 
         for p in produkty_db
     }
+    
+    # Načítanie objednávok pre admina
+    zoznam_objednavok = []
+    if is_admin:
+        zoznam_objednavok = db.query(ObjednavkaModel).order_by(ObjednavkaModel.datum.desc()).all()
+        
     db.close()
     
     response = templates.TemplateResponse(
@@ -174,6 +180,7 @@ def domov(request: Request, sprava: str = None):
             "prihlaseny_zakaznik": prihlaseny_zakaznik,
             "klubove_body": klubove_body,
             "sprava": sprava,
+            "zoznam_objednavok": zoznam_objednavok,
             "request": request
         }
     )
@@ -316,7 +323,6 @@ def pridat_produkt(
 ):
     is_admin = request.cookies.get("is_admin") == "True"
     
-    # Bezpečnostná kontrola vstupov (blokovanie HTML/XSS pokusov)
     if "<" in nazov or ">" in nazov or "<" in druh or ">" in druh:
         raise HTTPException(status_code=400, detail="Vstupy nemôžu obsahovať HTML značky!")
 
@@ -481,6 +487,17 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
     zlava = zlavovy_kupon.get(kupon.strip(), 0)
     if zlava > 0:
         celkova_cena = celkova_cena * (1 - zlava / 100)
+
+    # ULOŽENIE OBJEDNÁVKY DO DATABÁZY
+    if kosik:
+        popis_kosika = ", ".join([f"{mnozstvo}x {polozka}" for polozka, mnozstvo in kosik.items()])
+        nova_objednavka = ObjednavkaModel(
+            zakaznik=prihlaseny_zakaznik if prihlaseny_zakaznik else "Anonymný zákazník",
+            polozky=popis_kosika,
+            celkova_cena=round(celkova_cena, 2)
+        )
+        db.add(nova_objednavka)
+        db.commit()
 
     if prihlaseny_zakaznik:
         body_dict = nacitaj_body()

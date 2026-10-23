@@ -1,5 +1,6 @@
 import os
-from sqlalchemy import create_engine, Column, String, Float, Integer
+from datetime import datetime
+from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -28,6 +29,16 @@ class ProduktModel(Base):
     povod = Column(String, default="Slovensko")
     miesto = Column(String, default="Lokálna farma")
     znacka = Column(String, default="Môj Obchod")
+
+# Definícia tabuľky pre históriu objednávok
+class ObjednavkaModel(Base):
+    __tablename__ = "objednavky"
+    
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    zakaznik = Column(String, nullable=True)
+    polozky = Column(String, nullable=False)  # Uloží sa napr. ako "2x jablko, 1x maslo"
+    celkova_cena = Column(Float, nullable=False)
+    datum = Column(DateTime, default=datetime.utcnow)
 
 # Vytvorenie tabuliek v databáze
 def init_db():
