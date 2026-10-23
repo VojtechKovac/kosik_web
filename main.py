@@ -9,7 +9,7 @@ import uuid
 # Import z nášho súboru database.py
 from database import SessionLocal, ProduktModel, init_db
 
-app = FastAPI()
+app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # ==========================================
 # BEZPEČNOSTNÉ HLAVIČKY (Ochrana pred útokmi)
