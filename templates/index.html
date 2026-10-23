@@ -699,10 +699,26 @@
     {% endif %}
     {% endif %}
 
+    <!-- OVLÁDACIE PRVKY (VYHĽADÁVANIE, TRIEDENIE, KATEGÓRIE) -->
     <div class="controls">
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="🔍 Hľadať produkt..." onkeyup="filterProducts()">
         </div>
+
+        <!-- ROZBAĽOVACIE MENU NA TRIEDENIE -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="sortSelect" style="font-size: 14px; font-weight: 600; color: #4b5563;">Triediť:</label>
+            <select id="sortSelect" onchange="filterProducts()" style="padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; background: white; outline: none; cursor: pointer;">
+                <option value="default">Predvolené</option>
+                <option value="price-asc">Cena: Od najnižšej</option>
+                <option value="price-desc">Cena: Od najvyššej</option>
+                <option value="name-asc">Názov: A - Z</option>
+                <option value="name-desc">Názov: Z - A</option>
+                <option value="stock-asc">Sklad: Od najmenej kusov</option>
+                <option value="stock-desc">Sklad: Od najviac kusov</option>
+            </select>
+        </div>
+
         <div class="filters">
             <button class="filter-btn active" onclick="filterCategory('všetko', this)">Všetko</button>
             <button class="filter-btn" onclick="filterCategory('ovocie', this)">🍎 Ovocie</button>
@@ -715,8 +731,9 @@
     <div class="products" id="productsGrid">
 
         {% for nazov, udaje in kategoria.items() %}
+        {% set platna_cena = aktualne_akcie[nazov][0] if nazov in aktualne_akcie else udaje[0] %}
 
-        <div class="product" data-name="{{ nazov|lower }}" data-category="{{ udaje[1]|lower }}">
+        <div class="product" data-name="{{ nazov|lower }}" data-category="{{ udaje[1]|lower }}" data-price="{{ platna_cena }}" data-stock="{{ udaje[2] }}">
             
             {% if nazov in aktualne_akcie %}
                 <div class="card-sale-badge">ZĽAVA -{{ aktualne_akcie[nazov][1] }}%</div>
@@ -870,9 +887,12 @@
 
     function filterProducts() {
         let query = document.getElementById('searchInput').value.toLowerCase();
-        let products = document.querySelectorAll('.product');
+        let sortValue = document.getElementById('sortSelect').value;
+        let grid = document.getElementById('productsGrid');
+        let productsArray = Array.from(grid.querySelectorAll('.product'));
 
-        products.forEach(product => {
+        // 1. Filtrovanie podľa vyhľadávania a kategórie
+        productsArray.forEach(product => {
             let name = product.getAttribute('data-name');
             let category = product.getAttribute('data-category');
 
@@ -885,6 +905,34 @@
                 product.style.display = "none";
             }
         });
+
+        // 2. Triedenie (Sorting) produktov
+        productsArray.sort((a, b) => {
+            let priceA = parseFloat(a.getAttribute('data-price'));
+            let priceB = parseFloat(b.getAttribute('data-price'));
+            let nameA = a.getAttribute('data-name');
+            let nameB = b.getAttribute('data-name');
+            let stockA = parseInt(a.getAttribute('data-stock'));
+            let stockB = parseInt(b.getAttribute('data-stock'));
+
+            if (sortValue === 'price-asc') {
+                return priceA - priceB;
+            } else if (sortValue === 'price-desc') {
+                return priceB - priceA;
+            } else if (sortValue === 'name-asc') {
+                return nameA.localeCompare(nameB);
+            } else if (sortValue === 'name-desc') {
+                return nameB.localeCompare(nameA);
+            } else if (sortValue === 'stock-asc') {
+                return stockA - stockB;
+            } else if (sortValue === 'stock-desc') {
+                return stockB - stockA;
+            }
+            return 0; // Predvolené usporiadanie
+        });
+
+        // Opätovné vykreslenie zoradených elementov do mriežky
+        productsArray.forEach(product => grid.appendChild(product));
     }
 
     function filterCategory(category, button) {
