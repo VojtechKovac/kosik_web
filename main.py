@@ -7,7 +7,7 @@ import os
 import uuid
 from urllib.parse import quote
 
-# Import z nášho súboru database.py (pridaný RecenziaModel)
+# Import z nášho súboru database.py
 from database import SessionLocal, ProduktModel, ObjednavkaModel, RecenziaModel, init_db
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
@@ -531,9 +531,13 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
         context={"request": request, "celkova_cena": round(celkova_cena, 2)}
     )
 
-# ENDPOINT PRE PRIDANIE RECENZIE
+# ENDPOINT PRE PRIDANIE RECENZIE S OCHRANOU PRED HTML/XSS ÚTOKMI
 @app.post("/pridat-recenziu")
 def pridat_recenziu(request: Request, produkt: str = Form(...), hodnotenie: int = Form(...), komentar: str = Form("")):
+    # Kontrola proti HTML značkám a hackom v komentári
+    if "<" in komentar or ">" in komentar:
+        raise HTTPException(status_code=400, detail="Komentár nemôže obsahovať HTML značky ani špeciálne znaky!")
+
     session_id = request.cookies.get("session_id")
     prihlaseny_zakaznik = aktivne_relacie.get(session_id) if session_id else None
     
