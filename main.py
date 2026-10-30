@@ -536,7 +536,7 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
 def pridat_recenziu(request: Request, produkt: str = Form(...), hodnotenie: int = Form(...), komentar: str = Form("")):
     # Kontrola proti HTML značkám a hackom v komentári
     if "<" in komentar or ">" in komentar:
-        raise HTTPException(status_code=400, detail="Komentár nemôže obsahovať HTML značky ani špeciálne znaky!")
+        raise HTTPException(status_code=400, detail="Komentár nemôže obsahovať HTML znački ani špeciálne znaky!")
 
     session_id = request.cookies.get("session_id")
     prihlaseny_zakaznik = aktivne_relacie.get(session_id) if session_id else None
@@ -553,3 +553,42 @@ def pridat_recenziu(request: Request, produkt: str = Form(...), hodnotenie: int 
     db.close()
     
     return RedirectResponse(f"/?sprava={quote('Ďakujeme za tvoje hodnotenie!')}", status_code=303)
+
+
+# ENDPOINT PRE SAMOSTATNÚ STRÁNKU DETAILU PRODUKTU
+@app.get("/produkt/{nazov_produktu}")
+def detail_produktu(request: Request, nazov_produktu: str):
+    db = SessionLocal()
+    produkt = db.query(ProduktModel).filter(ProduktModel.nazov == nazov_produktu).first()
+    
+    if not produkt:
+        db.close()
+        raise HTTPException(status_code=404, detail="Produkt nebol nájdený")
+        
+    # Získame recenzie pre daný produkt z databázy
+    recenzie_produktu = db.query(RecenziaModel).filter(RecenziaModel.produkt_nazov == nazov_produktu).all()
+    
+    # Výpočet priemeru hodnotení
+    priemer = 0
+    if recenzie_produktu:
+        priemer = round(sum(r.hodnotenie for r in recenzie_produktu) / len(recenzie_produktu), 1)
+        
+    session_id = request.cookies.get("session_id")
+    prihlaseny_zakaznik = aktivne_relacie.get(session_id) if session_id else None
+    is_admin = request.cookies.get("is_admin") == "True"
+
+    db.close()
+    
+    return templates.TemplateResponse(
+        request=request,
+        name="detail.html",
+        context={
+            "request": request,
+            "nazov": produkt.nazov,
+            "udaje": (produkt.cena, produkt.druh, produkt.sklad, produkt.povod, produkt.miesto, produkt.znacka),
+            "recenzie": recenzie_produktu,
+            "priemer": priemer,
+            "is_admin": is_admin,
+            "prihlaseny_zakaznik": prihlaseny_zakaznik
+        }
+    )

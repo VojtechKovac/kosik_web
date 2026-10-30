@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail produktu: {{ nazov }}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f8; color: #1f2937; padding: 40px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #2563eb; text-decoration: none; font-weight: bold; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { font-size: 32px; text-transform: capitalize; margin-bottom: 6px; }
+        .category { display: inline-block; background: #e5e7eb; color: #374151; font-size: 14px; padding: 6px 14px; border-radius: 20px; margin-bottom: 20px; font-weight: 600; }
+        .info-box { background: #f8fafc; padding: 20px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e5e7eb; }
+        .info-box div { margin-bottom: 8px; font-size: 15px; }
+        .price { font-size: 28px; font-weight: bold; color: #16a34a; margin-bottom: 25px; }
+        .reviews-section { margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+        .review-item { background: #f9fafb; padding: 12px 16px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #f3f4f6; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <a href="/" class="back-link">← Späť na hlavnú stránku</a>
+    
+    <h1>{{ nazov }}</h1>
+    <span class="category">{{ udaje[1] }}</span>
+
+    <div class="info-box">
+        <div>🏷️ <strong>Značka:</strong> {{ udaje[5] }}</div>
+        <div>🌍 <strong>Pôvod:</strong> {{ udaje[3] }}</div>
+        <div>📍 <strong>Pestovanie/Výroba:</strong> {{ udaje[4] }}</div>
+        <div>📦 <strong>Dostupný sklad:</strong> {{ udaje[2] }} ks</div>
+    </div>
+
+    <div class="price">
+        Cena: {{ "%.2f"|format(udaje[0]) }} €
+    </div>
+
+    <!-- Sekcia recenzií -->
+    <div class="reviews-section">
+        <h3>⭐ Hodnotenia a recenzie (Priemer: {{ priemer }} / 5)</h3>
+        
+        {% if recenzie and recenzie|length > 0 %}
+            <div style="margin-top: 15px;">
+                {% for rec in recenzie %}
+                <div class="review-item">
+                    <strong>{{ rec.autor }}</strong> (Hodnotenie: {% for i in range(rec.hodnotenie) %}⭐{% endfor %}):
+                    <p style="margin: 5px 0 0 0; color: #4b5563;">{{ rec.komentar }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p style="color: #6b7280; margin-top: 10px;">Tento produkt zatiaľ nemá žiadne recenzie.</p>
+        {% endif %}
+    </div>
+</div>
+
+</body>
+</html>

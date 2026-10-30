@@ -841,7 +841,11 @@
                     {% endif %}
                 </div>
 
-                <h3>{{ nazov }}</h3>
+                <a href="/produkt/{{ nazov }}" style="text-decoration: none; color: inherit;">
+                    <h3 style="transition: color 0.2s;" onmouseover="this.style.color='#2563eb'" onmouseout="this.style.color='#111827'">
+                        {{ nazov }}
+                    </h3>
+                </a>
                 <span class="category">{{ udaje[1] }}</span>
 
                 <div class="product-info-box">
