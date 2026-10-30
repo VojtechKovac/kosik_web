@@ -290,7 +290,7 @@
             border: 1px solid #d1d5db;
             border-radius: 10px;
             font-size: 16px;
-            width: 280px;
+            width: 250px;
             outline: none;
         }
 
@@ -699,10 +699,20 @@
     {% endif %}
     {% endif %}
 
-    <!-- OVLÁDACIE PRVKY (VYHĽADÁVANIE, TRIEDENIE, KATEGÓRIE) -->
+    <!-- OVLÁDACIE PRVKY (VYHĽADÁVANIE, CENOVÝ FILTER OD-DO, TRIEDENIE, KATEGÓRIE) -->
     <div class="controls">
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="🔍 Hľadať produkt..." onkeyup="filterProducts()">
+        </div>
+
+        <!-- CENOVÉ ROZPÄTIE (OD - DO €) -->
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <label style="font-size: 14px; font-weight: 600; color: #4b5563;">Cena (€):</label>
+            <input type="number" id="minPrice" placeholder="Od" min="0" step="0.1" oninput="filterProducts()" 
+                   style="width: 65px; padding: 10px 8px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; outline: none; text-align: center;">
+            <span style="color: #6b7280;">-</span>
+            <input type="number" id="maxPrice" placeholder="Do" min="0" step="0.1" oninput="filterProducts()" 
+                   style="width: 65px; padding: 10px 8px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; outline: none; text-align: center;">
         </div>
 
         <!-- ROZBAĽOVACIE MENU NA TRIEDENIE -->
@@ -913,29 +923,50 @@
 <script>
     let activeCategory = 'všetko';
 
+    function filterCategory(category, btn) {
+        activeCategory = category;
+        
+        // Zmena aktívneho tlačidla kategórie
+        let buttons = document.querySelectorAll('.filters .filter-btn');
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        filterProducts();
+    }
+
     function filterProducts() {
         let query = document.getElementById('searchInput').value.toLowerCase();
         let sortValue = document.getElementById('sortSelect').value;
+        
+        let minPriceInput = document.getElementById('minPrice').value;
+        let maxPriceInput = document.getElementById('maxPrice').value;
+        let minPrice = minPriceInput !== "" ? parseFloat(minPriceInput) : 0;
+        let maxPrice = maxPriceInput !== "" ? parseFloat(maxPriceInput) : Infinity;
+
         let grid = document.getElementById('productsGrid');
         let productsArray = Array.from(grid.querySelectorAll('.product'));
 
-        // 1. Filtrovanie podľa vyhľadávania a kategórie
+        // 1. Filtrovanie podľa vyhľadávania, kategórie a ceny (Od-Do)
         productsArray.forEach(product => {
             let name = product.getAttribute('data-name');
             let category = product.getAttribute('data-category');
+            let price = parseFloat(product.getAttribute('data-price'));
 
             let matchesSearch = name.includes(query);
             let matchesCategory = (activeCategory === 'všetko' || category === activeCategory);
+            let matchesPrice = (price >= minPrice && price <= maxPrice);
 
-            if (matchesSearch && matchesCategory) {
+            if (matchesSearch && matchesCategory && matchesPrice) {
                 product.style.display = "flex";
             } else {
                 product.style.display = "none";
             }
         });
 
-        // 2. Triedenie (Sorting) produktov
-        productsArray.sort((a, b) => {
+        // 2. Triedenie (Sorting) viditeľných produktov
+        let visibleProducts = productsArray.filter(product => product.style.display !== "none");
+
+        visibleProducts.sort((a, b) => {
             let priceA = parseFloat(a.getAttribute('data-price'));
             let priceB = parseFloat(b.getAttribute('data-price'));
             let nameA = a.getAttribute('data-name');
@@ -956,20 +987,14 @@
             } else if (sortValue === 'stock-desc') {
                 return stockB - stockA;
             }
-            return 0; // Predvolené usporiadanie
+            return 0;
         });
 
-        // Opätovné vykreslenie zoradených elementov do mriežky
-        productsArray.forEach(product => grid.appendChild(product));
-    }
-
-    function filterCategory(category, button) {
-        activeCategory = category;
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-        filterProducts();
+        // Opätovné zoradenie elementov v DOM gribe
+        visibleProducts.forEach(product => {
+            grid.appendChild(product);
+        });
     }
 </script>
-
 </body>
 </html>
