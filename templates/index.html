@@ -519,7 +519,7 @@
             font-size: 14px;
         }
 
-        /* TOAST NOTIFIKÁCIE (Vyskakovacie okno vpravo hore) */
+        /* TOAST NOTIFIKÁCIE */
         #toastContainer {
             position: fixed;
             top: 25px;
@@ -558,7 +558,6 @@
             to { opacity: 0; transform: translateY(-10px); }
         }
 
-        /* Štýly pre stránkovanie (Pagination) */
         .pagination {
             display: flex;
             justify-content: center;
@@ -629,14 +628,12 @@
 
 <body>
 
-<!-- KONTAJNER PRE TOAST NOTIFIKÁCIE -->
 <div id="toastContainer"></div>
 
 <header>
     <h1>🛒 Môj obchod</h1>
 
     <div class="header-right">
-        <!-- TLAČIDLO NA AKČNý LETÁK -->
         <a href="/letak" class="flyer-link">🔥 Akčný leták</a>
 
         {% if is_admin %}
@@ -659,7 +656,6 @@
 
 <main>
 
-    <!-- NOTIFIKAČNÁ SPRÁVA (FLASH MESSAGE) -->
     {% if sprava %}
         <div style="background-color: #dcfce7; color: #166534; padding: 14px 20px; border-radius: 14px; margin-bottom: 25px; border: 1px solid #bbf7d0; font-weight: 500; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
             <span style="font-size: 18px;">🔔</span>
@@ -696,14 +692,12 @@
                 </div>
             {% else %}
                 <div class="club-forms">
-                    <!-- Registrácia -->
                     <form action="/register-club-card" method="post" class="club-form">
                         <input type="email" name="email" placeholder="Tvoj email" required>
                         <input type="password" name="heslo" placeholder="Heslo" required>
                         <button type="submit" class="club-btn-reg">Založiť kartu</button>
                     </form>
 
-                    <!-- Prihlásenie -->
                     <form action="/login-club-card" method="post" class="club-form">
                         <input type="email" name="email" placeholder="Email" required>
                         <input type="password" name="heslo" placeholder="Heslo" required>
@@ -713,6 +707,41 @@
             {% endif %}
         </div>
     </div>
+
+    <!-- SLEDOVANIE OBJEDNÁVOK PRE PRIHLÁSENÉHO ZÁKAZNÍKA -->
+    {% if prihlaseny_zakaznik and zakaznicke_objednavky %}
+    <div style="background: white; border-radius: 16px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.04); border: 1px solid #e5e7eb;">
+        <h3 style="color: #111827; margin-bottom: 15px; font-size: 20px;">📦 Sledovanie tvojich objednávok</h3>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #e5e7eb; text-align: left; color: #4b5563;">
+                        <th style="padding: 10px;">ID</th>
+                        <th style="padding: 10px;">Položky</th>
+                        <th style="padding: 10px;">Suma</th>
+                        <th style="padding: 10px;">Dátum</th>
+                        <th style="padding: 10px;">Aktuálny stav</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obj in zakaznicke_objednavky %}
+                    <tr style="border-bottom: 1px solid #f3f4f6;">
+                        <td style="padding: 10px; font-weight: bold;">#{{ obj.id }}</td>
+                        <td style="padding: 10px;">{{ obj.polozky }}</td>
+                        <td style="padding: 10px; font-weight: bold; color: #16a34a;">{{ "%.2f"|format(obj.celkova_cena) }} €</td>
+                        <td style="padding: 10px; color: #6b7280;">{{ obj.datum.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td style="padding: 10px;">
+                            <span style="background: #e0f2fe; color: #0369a1; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; display: inline-block;">
+                                🚚 {{ obj.stav }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 
     {% if is_admin %}
     <div class="admin-new-product">
@@ -740,10 +769,10 @@
         </form>
     </div>
 
-    <!-- HISTÓRIA OBJEDNÁVOK V ADMIN PANELI -->
+    <!-- HISTÓRIA A ZMENA STAVU OBJEDNÁVOK V ADMIN PANELI -->
     {% if zoznam_objednavok %}
     <div class="admin-new-product" style="background: #f0fdf4; border-color: #86efac; margin-top: 25px;">
-        <h3 style="color: #16a34a; margin-bottom: 15px;">📦 História prijatých objednávok</h3>
+        <h3 style="color: #16a34a; margin-bottom: 15px;">📦 Správa prijatých objednávok</h3>
         <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
                 <thead>
@@ -753,6 +782,7 @@
                         <th style="padding: 10px;">Položky</th>
                         <th style="padding: 10px;">Suma</th>
                         <th style="padding: 10px;">Dátum</th>
+                        <th style="padding: 10px;">Zmeniť stav objednávky</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -763,6 +793,18 @@
                         <td style="padding: 10px;">{{ obj.polozky }}</td>
                         <td style="padding: 10px; font-weight: bold; color: #16a34a;">{{ "%.2f"|format(obj.celkova_cena) }} €</td>
                         <td style="padding: 10px; color: #6b7280; font-size: 13px;">{{ obj.datum.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td style="padding: 10px;">
+                            <form action="/zmenit-stav-objednavky" method="post" style="display: flex; gap: 6px; align-items: center;">
+                                <input type="hidden" name="objednavka_id" value="{{ obj.id }}">
+                                <select name="stav" style="padding: 6px; border-radius: 6px; border: 1px solid #86efac; font-size: 12px; background: white;">
+                                    <option value="Prijatá ➔ Pripravuje sa" {% if obj.stav == 'Prijatá ➔ Pripravuje sa' %}selected{% endif %}>Prijatá / Pripravuje sa</option>
+                                    <option value="Pripravená na vyzdvihnutie" {% if obj.stav == 'Pripravená na vyzdvihnutie' %}selected{% endif %}>Pripravená na vyzdvihnutie</option>
+                                    <option value="Odoslaná zákazníkovi" {% if obj.stav == 'Odoslaná zákazníkovi' %}selected{% endif %}>Odoslaná zákazníkovi</option>
+                                    <option value="Doručená / Dokončená" {% if obj.stav == 'Doručená / Dokončená' %}selected{% endif %}>Doručená / Dokončená</option>
+                                </select>
+                                <button type="submit" style="padding: 6px 10px; font-size: 12px; border-radius: 6px; background: #16a34a;">Uložiť</button>
+                            </form>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -772,13 +814,11 @@
     {% endif %}
     {% endif %}
 
-    <!-- OVLÁDACIE PRVKY (VYHĽADÁVANIE, CENOVÝ FILTER OD-DO, TRIEDENIE, KATEGÓRIE) -->
     <div class="controls">
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="🔍 Hľadať produkt..." onkeyup="filterProducts()">
         </div>
 
-        <!-- CENOVÉ ROZPÄTIE (OD - DO €) -->
         <div style="display: flex; align-items: center; gap: 6px;">
             <label style="font-size: 14px; font-weight: 600; color: #4b5563;">Cena (€):</label>
             <input type="number" id="minPrice" placeholder="Od" min="0" step="0.1" oninput="filterProducts()" 
@@ -788,7 +828,6 @@
                    style="width: 65px; padding: 10px 8px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; outline: none; text-align: center;">
         </div>
 
-        <!-- ROZBAĽOVACIE MENU NA TRIEDENIE -->
         <div style="display: flex; align-items: center; gap: 8px;">
             <label for="sortSelect" style="font-size: 14px; font-weight: 600; color: #4b5563;">Triediť:</label>
             <select id="sortSelect" onchange="filterProducts()" style="padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; background: white; outline: none; cursor: pointer;">
@@ -824,62 +863,34 @@
 
             <div class="product-top">
                 <div class="product-icon">
-                    {% if nazov == "cukor" %}
-                        🍚
-                    {% elif nazov == "maslo" %}
-                        🧈
-                    {% elif nazov == "jablko" %}
-                        🍎
-                    {% elif nazov == "banan" %}
-                        🍌
-                    {% elif nazov == "hruska" %}
-                        🍐
-                    {% elif nazov == "marhula" %}
-                        🍑
-                    {% elif nazov == "slivka" %}
-                        🟣
-                    {% elif nazov == "citron" %}
-                        🍋
-                    {% elif nazov == "pomaranc" %}
-                        🍊
-                    {% elif nazov == "jahody" %}
-                        🍓
-                    {% elif nazov == "mrkva" %}
-                        🥕
-                    {% elif nazov == "petrzlen" %}
-                        🌿
-                    {% elif nazov == "celer" %}
-                        🥬
-                    {% elif nazov == "zemiak" %}
-                        🥔
-                    {% elif nazov == "cibula" %}
-                        🧅
-                    {% elif nazov == "cesnak" %}
-                        🧄
-                    {% elif nazov == "paradajka" %}
-                        🍅
-                    {% elif nazov == "uhorka" %}
-                        🥒
-                    {% elif nazov == "cokolada" or nazov == "bomboni" %}
-                        🍫
-                    {% elif nazov == "keksik" or nazov == "cukriky" %}
-                        🍪
-                    {% elif nazov == "mlieko" %}
-                        🥛
-                    {% elif nazov == "jogurt" %}
-                        🍦
-                    {% elif nazov == "syr" %}
-                        🧀
-                    {% elif nazov == "chlieb" %}
-                        🍞
-                    {% elif nazov == "rozok" %}
-                        🥐
-                    {% elif "coca" in nazov or "cola" in nazov %}
-                        🥤
-                    {% elif "mineral" in nazov or "voda" in nazov %}
-                        💧
-                    {% else %}
-                        🛒
+                    {% if nazov == "cukor" %}🍚
+                    {% elif nazov == "maslo" %}🧈
+                    {% elif nazov == "jablko" %}🍎
+                    {% elif nazov == "banan" %}🍌
+                    {% elif nazov == "hruska" %}🍐
+                    {% elif nazov == "marhula" %}🍑
+                    {% elif nazov == "slivka" %}🟣
+                    {% elif nazov == "citron" %}🍋
+                    {% elif nazov == "pomaranc" %}🍊
+                    {% elif nazov == "jahody" %}🍓
+                    {% elif nazov == "mrkva" %}🥕
+                    {% elif nazov == "petrzlen" %}🌿
+                    {% elif nazov == "celer" %}🥬
+                    {% elif nazov == "zemiak" %}🥔
+                    {% elif nazov == "cibula" %}🧅
+                    {% elif nazov == "cesnak" %}🧄
+                    {% elif nazov == "paradajka" %}🍅
+                    {% elif nazov == "uhorka" %}🥒
+                    {% elif nazov == "cokolada" or nazov == "bomboni" %}🍫
+                    {% elif nazov == "keksik" or nazov == "cukriky" %}🍪
+                    {% elif nazov == "mlieko" %}🥛
+                    {% elif nazov == "jogurt" %}🍦
+                    {% elif nazov == "syr" %}🧀
+                    {% elif nazov == "chlieb" %}🍞
+                    {% elif nazov == "rozok" %}🥐
+                    {% elif "coca" in nazov or "cola" in nazov %}🥤
+                    {% elif "mineral" in nazov or "voda" in nazov %}💧
+                    {% else %}🛒
                     {% endif %}
                 </div>
 
@@ -922,7 +933,6 @@
                     <div class="empty" id="vypredane-box-{{ nazov }}">Vypredané</div>
                 {% endif %}
 
-                <!-- HVIEZDIČKOVÉ HODNOTENIE A RECENZIE -->
                 <div style="margin-top: 12px; font-size: 13px; border-top: 1px solid #f3f4f6; padding-top: 8px;">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
                         <span>
@@ -935,7 +945,6 @@
                         </span>
                     </div>
 
-                    <!-- Formulár na pridanie recenzie -->
                     <form action="/pridat-recenziu" method="post" style="display: flex; gap: 4px; margin-top: 6px;">
                         <input type="hidden" name="produkt" value="{{ nazov }}">
                         <select name="hodnotenie" style="padding: 4px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 12px;">
@@ -972,7 +981,6 @@
 
     </div>
 
-    <!-- TLAČIDLÁ STRÁNKOVANIA (PAGINATION) -->
     <div id="paginationContainer" class="pagination"></div>
 
 </main>
@@ -1005,7 +1013,6 @@
     let currentPage = 1;
     let itemsPerPage = 6;
 
-    // Funkcia na zobrazenie Toast notifikácie
     function showToast(message, isError = false) {
         let container = document.getElementById('toastContainer');
         let toast = document.createElement('div');
@@ -1018,9 +1025,8 @@
         }, 3000);
     }
 
-    // AJAX odoslanie formulára pre pridanie do košíka bez reloadu stránky
     async function pridatDoKosikaAjax(event, formElement, nazovProduktu) {
-        event.preventDefault(); // Zastavíme klasické odoslanie formulára
+        event.preventDefault();
 
         let formData = new FormData(formElement);
 
@@ -1039,7 +1045,6 @@
                 showToast(data.message, !data.success);
 
                 if (data.success) {
-                    // Aktualizácia skladu priamo na karte produktu bez reloadu
                     let productCard = formElement.closest('.product');
                     productCard.setAttribute('data-stock', data.new_stock);
 
@@ -1049,7 +1054,6 @@
                     let inputElement = document.getElementById(`input-mnozstvo-${nazovProduktu}`);
                     inputElement.max = data.new_stock;
 
-                    // Ak sa tovar vypredal, skryjeme formulár a ukážeme "Vypredané"
                     if (data.new_stock <= 0) {
                         formElement.remove();
                         let detailsDiv = productCard.querySelector('.product-details');

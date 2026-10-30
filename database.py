@@ -39,6 +39,7 @@ class ObjednavkaModel(Base):
     polozky = Column(String, nullable=False)  # Uloží sa napr. ako "2x jablko, 1x maslo"
     celkova_cena = Column(Float, nullable=False)
     datum = Column(DateTime, default=datetime.utcnow)
+    stav = Column(String, default="Prijatá ➔ Pripravuje sa")  # Stav objednávky
 
 # Definícia tabuľky pre recenzie a hodnotenia produktov
 class RecenziaModel(Base):

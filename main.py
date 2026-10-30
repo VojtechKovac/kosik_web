@@ -161,10 +161,15 @@ def domov(request: Request, sprava: str = None):
         for p in produkty_db
     }
     
-    # Načítanie objednávok pre admina
+    # Načítanie objednávok pre admina alebo prihláseného zákazníka
     zoznam_objednavok = []
+    zakaznicke_objednavky = []
+    
     if is_admin:
         zoznam_objednavok = db.query(ObjednavkaModel).order_by(ObjednavkaModel.datum.desc()).all()
+    
+    if prihlaseny_zakaznik:
+        zakaznicke_objednavky = db.query(ObjednavkaModel).filter(ObjednavkaModel.zakaznik == prihlaseny_zakaznik).order_by(ObjednavkaModel.datum.desc()).all()
         
     # Načítanie recenzií a výpočet priemerných hodnotení
     vsetky_recenzie = db.query(RecenziaModel).all()
@@ -194,6 +199,7 @@ def domov(request: Request, sprava: str = None):
             "klubove_body": klubove_body,
             "sprava": sprava,
             "zoznam_objednavok": zoznam_objednavok,
+            "zakaznicke_objednavky": zakaznicke_objednavky,
             "recenzie_dict": recenzie_dict,
             "priemer_hodnoteni": priemer_hodnoteni,
             "request": request
@@ -323,6 +329,24 @@ def dozaskladnit(request: Request, polozka: str = Form(...), pocet: int = Form(.
         db.close()
     else:
         sprava = "Nemáte oprávnenie alebo zadaný počet je neplatný."
+    return RedirectResponse(f"/?sprava={quote(sprava)}", status_code=303)
+
+# ENDPOINT PRE ZMENU STAVU OBJEDNÁVKY (ADMIN)
+@app.post("/zmenit-stav-objednavky")
+def zmenit_stav_objednavky(request: Request, objednavka_id: int = Form(...), stav: str = Form(...)):
+    is_admin = request.cookies.get("is_admin") == "True"
+    if is_admin:
+        db = SessionLocal()
+        obj = db.query(ObjednavkaModel).filter(ObjednavkaModel.id == objednavka_id).first()
+        if obj:
+            obj.stav = stav
+            db.commit()
+            sprava = f"Stav objednávky #{objednavka_id} bol úspešne zmenený."
+        else:
+            sprava = "Objednávka nebola nájdená."
+        db.close()
+    else:
+        sprava = "Nemáte oprávnenie."
     return RedirectResponse(f"/?sprava={quote(sprava)}", status_code=303)
 
 @app.post("/pridat_produkt")
@@ -456,7 +480,6 @@ def upravit(request: Request, response: Response, polozka: str = Form(...), akci
             produkt.sklad += mnozstvo
             db.commit()
 
-    # Prepočítanie celkovej ceny košíka a aktuálnych cien
     aktualne_akcie = generuj_akcie(db)
     produkty_db = db.query(ProduktModel).all()
     kategoria_dict = {p.nazov: (p.cena, p.druh, p.sklad, p.povod, p.miesto, p.znacka) for p in produkty_db}
@@ -474,7 +497,6 @@ def upravit(request: Request, response: Response, polozka: str = Form(...), akci
             if p_nazov == polozka:
                 item_spolu = subtotal
 
-    # Ak je to požiadavka cez JavaScript (AJAX), vrátime JSON dáta
     accept_header = request.headers.get("accept", "")
     if "application/json" in accept_header or request.headers.get("x-requested-with") == "XMLHttpRequest":
         return {
@@ -544,12 +566,14 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
     if zlava > 0:
         celkova_cena = celkova_cena * (1 - zlava / 100)
 
+    # ULOŽENIE OBJEDNÁVKY S POČIATOČNÝM STAVOM
     if kosik:
         popis_kosika = ", ".join([f"{mnozstvo}x {polozka}" for polozka, mnozstvo in kosik.items()])
         nova_objednavka = ObjednavkaModel(
             zakaznik=prihlaseny_zakaznik if prihlaseny_zakaznik else "Anonymný zákazník",
             polozky=popis_kosika,
-            celkova_cena=round(celkova_cena, 2)
+            celkova_cena=round(celkova_cena, 2),
+            stav="Prijatá ➔ Pripravuje sa"
         )
         db.add(nova_objednavka)
         db.commit()
@@ -614,7 +638,7 @@ def detail_produktu(request: Request, nazov_produktu: str):
     
     return templates.TemplateResponse(
         request=request,
-        name="detail.html",
+        name="index.html", # Prípadne detail.html
         context={
             "request": request,
             "nazov": produkt.nazov,
