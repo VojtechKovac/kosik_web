@@ -54,4 +54,6 @@ class RecenziaModel(Base):
 
 # Vytvorenie tabuliek v databáze
 def init_db():
+    # Dočasne vymažeme staré tabuľky, aby sa na Renderi vytvorili nanovo so stĺpcom 'stav'
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
