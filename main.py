@@ -7,8 +7,8 @@ import os
 import uuid
 from urllib.parse import quote
 
-# Import z nášho súboru database.py
-from database import SessionLocal, ProduktModel, ObjednavkaModel, RecenziaModel, init_db
+# Import z nášho súboru database.py (pridali sme UzivatelModel)
+from database import SessionLocal, ProduktModel, ObjednavkaModel, RecenziaModel, UzivatelModel, init_db
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
@@ -24,9 +24,6 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 templates = Jinja2Templates(directory="templates")
-
-UZIVATELIA_FILE = "uzivatelia.txt"
-BODY_FILE = "body.txt"
 
 # Slovník aktívnych relácií pre zákazníkov: { session_id: email_zakaznika }
 aktivne_relacie = {}
@@ -115,35 +112,6 @@ def daj_kosik_pre_session(request: Request, response: Response):
         
     return session_id, aktivne_kosiky[session_id]
 
-def nacitaj_uzivatelov():
-    uzivatelia = {}
-    if os.path.exists(UZIVATELIA_FILE):
-        with open(UZIVATELIA_FILE, "r", encoding="utf-8") as f:
-            for riadok in f:
-                parts = riadok.strip().split(";")
-                if len(parts) == 2:
-                    uzivatelia[parts[0]] = parts[1]
-    return uzivatelia
-
-def uloz_uzivatela(email, heslo):
-    with open(UZIVATELIA_FILE, "a", encoding="utf-8") as f:
-        f.write(f"{email};{heslo}\n")
-
-def nacitaj_body():
-    body = {}
-    if os.path.exists(BODY_FILE):
-        with open(BODY_FILE, "r", encoding="utf-8") as f:
-            for riadok in f:
-                parts = riadok.strip().split(";")
-                if len(parts) == 2:
-                    body[parts[0]] = int(parts[1])
-    return body
-
-def uloz_body_db(body_dict):
-    with open(BODY_FILE, "w", encoding="utf-8") as f:
-        for email, body in body_dict.items():
-            f.write(f"{email};{body}\n")
-
 
 @app.get("/")
 def domov(request: Request, sprava: str = None):
@@ -152,7 +120,6 @@ def domov(request: Request, sprava: str = None):
     
     session_id = request.cookies.get("session_id")
     prihlaseny_zakaznik = aktivne_relacie.get(session_id) if session_id else None
-    klubove_body = nacitaj_body()
     is_admin = request.cookies.get("is_admin") == "True"
 
     produkty_db = db.query(ProduktModel).all()
@@ -164,10 +131,16 @@ def domov(request: Request, sprava: str = None):
     zoznam_objednavok = []
     zakaznicke_objednavky = []
     registrovani_uzivatelia = {}
+    klubove_body = {}
     
+    # Načítanie používateľov a bodov priamo z databázy
+    vsetci_uzivatelia = db.query(UzivatelModel).all()
+    for u in vsetci_uzivatelia:
+        registrovani_uzivatelia[u.email] = u.heslo
+        klubove_body[u.email] = u.body
+
     if is_admin:
         zoznam_objednavok = db.query(ObjednavkaModel).order_by(ObjednavkaModel.datum.desc()).all()
-        registrovani_uzivatelia = nacitaj_uzivatelov()
     
     if prihlaseny_zakaznik:
         zakaznicke_objednavky = db.query(ObjednavkaModel).filter(ObjednavkaModel.zakaznik == prihlaseny_zakaznik).order_by(ObjednavkaModel.datum.desc()).all()
@@ -252,16 +225,19 @@ def logout():
 @app.post("/register-club-card")
 def register_club_card(request: Request, email: str = Form(...), heslo: str = Form(...)):
     email = email.strip().lower()
-    uzivatelia = nacitaj_uzivatelov()
-    body_dict = nacitaj_body()
+    db = SessionLocal()
+    
+    existujuci = db.query(UzivatelModel).filter(UzivatelModel.email == email).first()
 
-    if email and email not in uzivatelia:
-        uloz_uzivatela(email, heslo)
-        body_dict[email] = 0
-        uloz_body_db(body_dict)
+    if email and not existujuci:
+        novy_uzivatel = UzivatelModel(email=email, heslo=heslo, body=0)
+        db.add(novy_uzivatel)
+        db.commit()
         sprava = "Registrácia klubovej karty prebehla úspešne!"
     else:
         sprava = "Tento email je už zaregistrovaný."
+    
+    db.close()
 
     session_id = request.cookies.get("session_id")
     if not session_id:
@@ -276,8 +252,11 @@ def register_club_card(request: Request, email: str = Form(...), heslo: str = Fo
 @app.post("/login-club-card")
 def login_club_card(request: Request, email: str = Form(...), heslo: str = Form(...)):
     email = email.strip().lower()
-    uzivatelia = nacitaj_uzivatelov()
-    if email in uzivatelia and uzivatelia[email] == heslo:
+    db = SessionLocal()
+    uzivatel = db.query(UzivatelModel).filter(UzivatelModel.email == email).first()
+    db.close()
+
+    if uzivatel and uzivatel.heslo == heslo:
         session_id = request.cookies.get("session_id")
         if not session_id:
             session_id = str(uuid.uuid4())
@@ -303,14 +282,15 @@ def uplatnit_body(request: Request):
     prihlaseny_zakaznik = aktivne_relacie.get(session_id) if session_id else None
 
     if prihlaseny_zakaznik:
-        body_dict = nacitaj_body()
-        body = body_dict.get(prihlaseny_zakaznik, 0)
-        if body >= 100:
-            body_dict[prihlaseny_zakaznik] = body - 100
-            uloz_body_db(body_dict)
+        db = SessionLocal()
+        uzivatel = db.query(UzivatelModel).filter(UzivatelModel.email == prihlaseny_zakaznik).first()
+        if uzivatel and uzivatel.body >= 100:
+            uzivatel.body -= 100
+            db.commit()
             sprava = "Úspešne ste uplatnili 100 vernostných bodov!"
         else:
             sprava = "Nemáte dostatok bodov (potrebujete aspoň 100)."
+        db.close()
     else:
         sprava = "Na uplatnenie bodov musíte byť prihlásený."
     return RedirectResponse(f"/?sprava={quote(sprava)}", status_code=303)
@@ -319,12 +299,15 @@ def uplatnit_body(request: Request):
 def admin_upravit_body(request: Request, email: str = Form(...), zmena_bodov: int = Form(...)):
     is_admin = request.cookies.get("is_admin") == "True"
     if is_admin:
-        body_dict = nacitaj_body()
-        aktualne_body = body_dict.get(email, 0)
-        nove_body = max(0, aktualne_body + zmena_bodov)
-        body_dict[email] = nove_body
-        uloz_body_db(body_dict)
-        sprava = f"Body pre zákazníka {email} boli úspešne upravené."
+        db = SessionLocal()
+        uzivatel = db.query(UzivatelModel).filter(UzivatelModel.email == email).first()
+        if uzivatel:
+            uzivatel.body = max(0, uzivatel.body + zmena_bodov)
+            db.commit()
+            sprava = f"Body pre zákazníka {email} boli úspešne upravené."
+        else:
+            sprava = "Zákazník nebol nájdený."
+        db.close()
     else:
         sprava = "Nemáte oprávnenie."
     return RedirectResponse(f"/?sprava={quote(sprava)}", status_code=303)
@@ -594,11 +577,13 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
         db.refresh(nova_objednavka)
         objednavka_id = nova_objednavka.id
 
+    # Pripočet vernostných bodov priamo do databázy k užívateľovi
     if prihlaseny_zakaznik:
-        body_dict = nacitaj_body()
-        ziskane_body = int(celkova_cena)
-        body_dict[prihlaseny_zakaznik] = body_dict.get(prihlaseny_zakaznik, 0) + ziskane_body
-        uloz_body_db(body_dict)
+        uzivatel = db.query(UzivatelModel).filter(UzivatelModel.email == prihlaseny_zakaznik).first()
+        if uzivatel:
+            ziskane_body = int(celkova_cena)
+            uzivatel.body += ziskane_body
+            db.commit()
 
     db.close()
     

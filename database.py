@@ -1,59 +1,56 @@
 import os
-from datetime import datetime
-from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from datetime import datetime
 
-# URL k databáze (Render ti ju poskytne cez environmentálnu premennú DATABASE_URL)
-# Pre lokálne testovanie sa použije lokálna SQLite databáza
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./obchod.db")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Úprava pre Render PostgreSQL URL, aby explicitly použilo psycopg2 ovládač
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
-elif DATABASE_URL.startswith("postgresql://") and not DATABASE_URL.startswith("postgresql+"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./obchod.db"
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Definícia tabuľky pre produkty
 class ProduktModel(Base):
     __tablename__ = "produkty"
+    id = Column(Integer, primary_key=True, index=True)
+    nazov = Column(String, unique=True, index=True)
+    cena = Column(Float)
+    druh = Column(String)
+    sklad = Column(Integer)
+    povod = Column(String)
+    miesto = Column(String)
+    znacka = Column(String)
 
-    nazov = Column(String, primary_key=True, index=True)
-    cena = Column(Float, nullable=False)
-    druh = Column(String, nullable=False)
-    sklad = Column(Integer, nullable=False)
-    povod = Column(String, default="Slovensko")
-    miesto = Column(String, default="Lokálna farma")
-    znacka = Column(String, default="Môj Obchod")
-
-# Definícia tabuľky pre históriu objednávok
 class ObjednavkaModel(Base):
     __tablename__ = "objednavky"
-    
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    zakaznik = Column(String, nullable=True)
-    polozky = Column(String, nullable=False)  # Uloží sa napr. ako "2x jablko, 1x maslo"
-    celkova_cena = Column(Float, nullable=False)
-    datum = Column(DateTime, default=datetime.utcnow)
-    stav = Column(String, default="Prijatá ➔ Pripravuje sa")  # Stav objednávky
+    id = Column(Integer, primary_key=True, index=True)
+    zakaznik = Column(String)
+    polozky = Column(String)
+    celkova_cena = Column(Float)
+    stav = Column(String, default="Prijatá ➔ Pripravuje sa")
+    datum = Column(DateTime, default=datetime.now)
 
-# Definícia tabuľky pre recenzie a hodnotenia produktov
 class RecenziaModel(Base):
     __tablename__ = "recenzie"
-    
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    produkt_nazov = Column(String, nullable=False, index=True)
-    hodnotenie = Column(Integer, nullable=False)  # Číslo od 1 do 5
-    komentar = Column(String, nullable=True)
-    autor = Column(String, default="Anonymný zákazník")
-    datum = Column(DateTime, default=datetime.utcnow)
+    id = Column(Integer, primary_key=True, index=True)
+    produkt_nazov = Column(String, index=True)
+    hodnotenie = Column(Integer)
+    komentar = Column(String)
+    autor = Column(String)
+    datum = Column(DateTime, default=datetime.now)
 
-# Vytvorenie tabuliek v databáze
+class UzivatelModel(Base):
+    __tablename__ = "uzivatelia"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    heslo = Column(String)
+    body = Column(Integer, default=0)
+
 def init_db():
-    # Dočasne vymažeme staré tabuľky, aby sa na Renderi vytvorili nanovo so stĺpcom 'stav'
-    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
