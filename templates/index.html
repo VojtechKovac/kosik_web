@@ -519,6 +519,45 @@
             font-size: 14px;
         }
 
+        /* TOAST NOTIFIKÁCIE (Vyskakovacie okno vpravo hore) */
+        #toastContainer {
+            position: fixed;
+            top: 25px;
+            right: 25px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: #111827;
+            color: white;
+            padding: 14px 22px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+            border-left: 5px solid #22c55e;
+        }
+
+        .toast.error {
+            border-left-color: #ef4444;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
         /* Štýly pre stránkovanie (Pagination) */
         .pagination {
             display: flex;
@@ -589,6 +628,9 @@
 </head>
 
 <body>
+
+<!-- KONTAJNER PRE TOAST NOTIFIKÁCIE -->
+<div id="toastContainer"></div>
 
 <header>
     <h1>🛒 Môj obchod</h1>
@@ -865,19 +907,19 @@
                             <span class="price">{{ "%.2f"|format(udaje[0]) }} €</span>
                         {% endif %}
                     </div>
-                    <div class="stock">
+                    <div class="stock" id="stock-text-{{ nazov }}">
                         Sklad: <strong>{{ udaje[2] }} ks</strong>
                     </div>
                 </div>
 
                 {% if udaje[2] > 0 %}
-                <form action="/pridat" method="post">
-                    <input type="number" name="mnozstvo" value="1" min="1" max="{{ udaje[2] }}">
+                <form action="/pridat" method="post" onsubmit="pridatDoKosikaAjax(event, this, '{{ nazov }}')">
+                    <input type="number" id="input-mnozstvo-{{ nazov }}" name="mnozstvo" value="1" min="1" max="{{ udaje[2] }}">
                     <input type="hidden" name="polozka" value="{{ nazov }}">
                     <button type="submit">Pridať</button>
                 </form>
                 {% else %}
-                    <div class="empty">Vypredané</div>
+                    <div class="empty" id="vypredane-box-{{ nazov }}">Vypredané</div>
                 {% endif %}
 
                 <!-- HVIEZDIČKOVÉ HODNOTENIE A RECENZIE -->
@@ -961,11 +1003,75 @@
 <script>
     let activeCategory = 'všetko';
     let currentPage = 1;
-    let itemsPerPage = 6; // Počet produktov na jednu stranu
+    let itemsPerPage = 6;
+
+    // Funkcia na zobrazenie Toast notifikácie
+    function showToast(message, isError = false) {
+        let container = document.getElementById('toastContainer');
+        let toast = document.createElement('div');
+        toast.className = `toast ${isError ? 'error' : ''}`;
+        toast.innerHTML = `<span>${isError ? '❌' : '✅'}</span> <div>${message}</div>`;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    // AJAX odoslanie formulára pre pridanie do košíka bez reloadu stránky
+    async function pridatDoKosikaAjax(event, formElement, nazovProduktu) {
+        event.preventDefault(); // Zastavíme klasické odoslanie formulára
+
+        let formData = new FormData(formElement);
+
+        try {
+            let response = await fetch('/pridat', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (response.ok) {
+                let data = await response.json();
+                showToast(data.message, !data.success);
+
+                if (data.success) {
+                    // Aktualizácia skladu priamo na karte produktu bez reloadu
+                    let productCard = formElement.closest('.product');
+                    productCard.setAttribute('data-stock', data.new_stock);
+
+                    let stockElement = document.getElementById(`stock-text-${nazovProduktu}`);
+                    stockElement.innerHTML = `Sklad: <strong>${data.new_stock} ks</strong>`;
+
+                    let inputElement = document.getElementById(`input-mnozstvo-${nazovProduktu}`);
+                    inputElement.max = data.new_stock;
+
+                    // Ak sa tovar vypredal, skryjeme formulár a ukážeme "Vypredané"
+                    if (data.new_stock <= 0) {
+                        formElement.remove();
+                        let detailsDiv = productCard.querySelector('.product-details');
+                        let vypredaneDiv = document.createElement('div');
+                        vypredaneDiv.className = 'empty';
+                        vypredaneDiv.id = `vypredane-box-${nazovProduktu}`;
+                        vypredaneDiv.innerText = 'Vypredané';
+                        detailsDiv.insertBefore(vypredaneDiv, detailsDiv.children[1]);
+                    }
+                }
+            } else {
+                showToast('Chyba pri komunikácii so serverom.', true);
+            }
+        } catch (error) {
+            console.error('Chyba:', error);
+            showToast('Nepodarilo sa pridať produkt do košíka.', true);
+        }
+    }
 
     function filterCategory(category, btn) {
         activeCategory = category;
-        currentPage = 1; // Pri zmene kategórie preskočíme na 1. stranu
+        currentPage = 1;
         
         let buttons = document.querySelectorAll('.filters .filter-btn');
         buttons.forEach(b => b.classList.remove('active'));
@@ -977,7 +1083,7 @@
     function changePage(page) {
         currentPage = page;
         filterProducts();
-        window.scrollTo({ top: 300, behavior: 'smooth' }); // Jemný posun nahor pri zmene strany
+        window.scrollTo({ top: 300, behavior: 'smooth' });
     }
 
     function filterProducts() {
@@ -992,7 +1098,6 @@
         let grid = document.getElementById('productsGrid');
         let productsArray = Array.from(grid.querySelectorAll('.product'));
 
-        // 1. Filtrovanie podľa vyhľadávania, kategórie a ceny
         let filteredProducts = productsArray.filter(product => {
             let name = product.getAttribute('data-name');
             let category = product.getAttribute('data-category');
@@ -1005,7 +1110,6 @@
             return matchesSearch && matchesCategory && matchesPrice;
         });
 
-        // 2. Triedenie (Sorting)
         filteredProducts.sort((a, b) => {
             let priceA = parseFloat(a.getAttribute('data-price'));
             let priceB = parseFloat(b.getAttribute('data-price'));
@@ -1023,7 +1127,6 @@
             return 0;
         });
 
-        // 3. Výpočet stránkovania
         let totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
         if (currentPage > totalPages && totalPages > 0) {
             currentPage = totalPages;
@@ -1034,14 +1137,11 @@
         let endIndex = startIndex + itemsPerPage;
         let paginatedProducts = filteredProducts.slice(startIndex, endIndex);
 
-        // Skrytie všetkých produktov a zobrazenie len tých pre aktuálnu stranu
         productsArray.forEach(product => product.style.display = "none");
         paginatedProducts.forEach(product => product.style.display = "flex");
 
-        // Opätovné zoradenie v DOM gribe
         filteredProducts.forEach(product => grid.appendChild(product));
 
-        // 4. Vykreslenie tlačidiel stránkovania
         renderPagination(totalPages);
     }
 
@@ -1049,9 +1149,8 @@
         let paginationContainer = document.getElementById('paginationContainer');
         paginationContainer.innerHTML = '';
 
-        if (totalPages <= 1) return; // Ak je len 1 strana, nezobrazujeme tlačidlá
+        if (totalPages <= 1) return;
 
-        // Tlačidlo "Predchádzajúca"
         if (currentPage > 1) {
             let prevBtn = document.createElement('button');
             prevBtn.className = 'page-btn';
@@ -1060,7 +1159,6 @@
             paginationContainer.appendChild(prevBtn);
         }
 
-        // Číselné tlačidlá
         for (let i = 1; i <= totalPages; i++) {
             let btn = document.createElement('button');
             btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
@@ -1069,7 +1167,6 @@
             paginationContainer.appendChild(btn);
         }
 
-        // Tlačidlo "Nasledujúca"
         if (currentPage < totalPages) {
             let nextBtn = document.createElement('button');
             nextBtn.className = 'page-btn';
@@ -1079,7 +1176,6 @@
         }
     }
 
-    // Spustenie pri načítaní stránky
     window.onload = function() {
         filterProducts();
     };

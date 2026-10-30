@@ -409,9 +409,22 @@ def pridat(request: Request, response: Response, polozka: str = Form(...), mnozs
         kosik[polozka] = kosik.get(polozka, 0) + mnozstvo
         db.commit()
         sprava = f"Do košíka úspešne pridané: {mnozstvo}x {polozka}"
+        sukces = True
+        aktualny_sklad = produkt.sklad
     else:
         sprava = "Nedostatok tohto tovaru na sklade!"
+        sukces = False
+        aktualny_sklad = produkt.sklad if produkt else 0
     db.close()
+
+    # Ak je to požiadavka cez JavaScript (fetch), vrátime JSON dáta pre Toast
+    accept_header = request.headers.get("accept", "")
+    if "application/json" in accept_header or request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return {
+            "success": sukces,
+            "message": sprava,
+            "new_stock": aktualny_sklad
+        }
 
     redir = RedirectResponse(f"/?sprava={quote(sprava)}", status_code=303)
     redir.set_cookie(key="session_id", value=session_id, httponly=True)
