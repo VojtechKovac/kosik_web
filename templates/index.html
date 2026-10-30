@@ -519,7 +519,6 @@
             font-size: 14px;
         }
 
-        /* TOAST NOTIFIKÁCIE */
         #toastContainer {
             position: fixed;
             top: 25px;
@@ -768,6 +767,39 @@
             <button type="submit" class="new-product-btn">+ Vytvoriť nový produkt aj s detailmi</button>
         </form>
     </div>
+
+    <!-- SPRÁVA REGISTROVANÝCH ZÁKAZNÍKOV A BODOV (ADMIN) -->
+    {% if registrovani_uzivatelia %}
+    <div class="admin-new-product" style="background: #eff6ff; border-color: #60a5fa; margin-top: 25px;">
+        <h3 style="color: #2563eb; margin-bottom: 15px;">👥 Správa registrovaných zákazníkov (Club Card)</h3>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #bfdbfe; text-align: left; color: #1e40af;">
+                        <th style="padding: 10px;">E-mail zákazníka</th>
+                        <th style="padding: 10px;">Aktuálne body</th>
+                        <th style="padding: 10px;">Upraviť body (Pridať / Odobrať)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for email, heslo in registrovani_uzivatelia.items() %}
+                    <tr style="border-bottom: 1px solid #dbeafe;">
+                        <td style="padding: 10px; font-weight: bold; color: #1f2937;">{{ email }}</td>
+                        <td style="padding: 10px; font-weight: bold; color: #16a34a;">⭐ {{ klubove_body.get(email, 0) }} bodov</td>
+                        <td style="padding: 10px;">
+                            <form action="/admin-upravit-body" method="post" style="display: flex; gap: 6px; align-items: center;">
+                                <input type="hidden" name="email" value="{{ email }}">
+                                <input type="number" name="zmena_bodov" value="10" style="width: 75px; padding: 6px; border-radius: 6px; border: 1px solid #93c5fd; font-size: 12px; text-align: center;" required>
+                                <button type="submit" style="padding: 6px 12px; font-size: 12px; border-radius: 6px; background: #2563eb; color: white;">Pridať/Odobrať</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- HISTÓRIA A ZMENA STAVU OBJEDNÁVOK V ADMIN PANELI -->
     {% if zoznam_objednavok %}

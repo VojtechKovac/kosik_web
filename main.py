@@ -161,12 +161,14 @@ def domov(request: Request, sprava: str = None):
         for p in produkty_db
     }
     
-    # Načítanie objednávok pre admina alebo prihláseného zákazníka
+    # Načítanie objednávok a registrovaných používateľov pre admina alebo zákazníka
     zoznam_objednavok = []
     zakaznicke_objednavky = []
+    registrovani_uzivatelia = {}
     
     if is_admin:
         zoznam_objednavok = db.query(ObjednavkaModel).order_by(ObjednavkaModel.datum.desc()).all()
+        registrovani_uzivatelia = nacitaj_uzivatelov()
     
     if prihlaseny_zakaznik:
         zakaznicke_objednavky = db.query(ObjednavkaModel).filter(ObjednavkaModel.zakaznik == prihlaseny_zakaznik).order_by(ObjednavkaModel.datum.desc()).all()
@@ -200,6 +202,7 @@ def domov(request: Request, sprava: str = None):
             "sprava": sprava,
             "zoznam_objednavok": zoznam_objednavok,
             "zakaznicke_objednavky": zakaznicke_objednavky,
+            "registrovani_uzivatelia": registrovani_uzivatelia,
             "recenzie_dict": recenzie_dict,
             "priemer_hodnoteni": priemer_hodnoteni,
             "request": request
@@ -314,6 +317,21 @@ def uplatnit_body(request: Request):
         sprava = "Na uplatnenie bodov musíte byť prihlásený."
     return RedirectResponse(f"/?sprava={quote(sprava)}", status_code=303)
 
+# ENDPOINT PRE SPRÁVU BODOV ZÁKAZNÍKA (ADMIN)
+@app.post("/admin-upravit-body")
+def admin_upravit_body(request: Request, email: str = Form(...), zmena_bodov: int = Form(...)):
+    is_admin = request.cookies.get("is_admin") == "True"
+    if is_admin:
+        body_dict = nacitaj_body()
+        aktualne_body = body_dict.get(email, 0)
+        nove_body = max(0, aktualne_body + zmena_bodov)
+        body_dict[email] = nove_body
+        uloz_body_db(body_dict)
+        sprava = f"Body pre zákazníka {email} boli úspešne upravené."
+    else:
+        sprava = "Nemáte oprávnenie."
+    return RedirectResponse(f"/?sprava={quote(sprava)}", status_code=303)
+
 @app.post("/dozaskladnit")
 def dozaskladnit(request: Request, polozka: str = Form(...), pocet: int = Form(...)):
     is_admin = request.cookies.get("is_admin") == "True"
@@ -331,7 +349,6 @@ def dozaskladnit(request: Request, polozka: str = Form(...), pocet: int = Form(.
         sprava = "Nemáte oprávnenie alebo zadaný počet je neplatný."
     return RedirectResponse(f"/?sprava={quote(sprava)}", status_code=303)
 
-# ENDPOINT PRE ZMENU STAVU OBJEDNÁVKY (ADMIN)
 @app.post("/zmenit-stav-objednavky")
 def zmenit_stav_objednavky(request: Request, objednavka_id: int = Form(...), stav: str = Form(...)):
     is_admin = request.cookies.get("is_admin") == "True"
@@ -566,7 +583,6 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
     if zlava > 0:
         celkova_cena = celkova_cena * (1 - zlava / 100)
 
-    # ULOŽENIE OBJEDNÁVKY S POČIATOČNÝM STAVOM
     if kosik:
         popis_kosika = ", ".join([f"{mnozstvo}x {polozka}" for polozka, mnozstvo in kosik.items()])
         nova_objednavka = ObjednavkaModel(
@@ -638,7 +654,7 @@ def detail_produktu(request: Request, nazov_produktu: str):
     
     return templates.TemplateResponse(
         request=request,
-        name="index.html", # Prípadne detail.html
+        name="index.html",
         context={
             "request": request,
             "nazov": produkt.nazov,
