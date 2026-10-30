@@ -519,6 +519,37 @@
             font-size: 14px;
         }
 
+        /* Štýly pre stránkovanie (Pagination) */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 40px;
+        }
+
+        .page-btn {
+            background: white;
+            border: 1px solid #d1d5db;
+            color: #374151;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover {
+            background: #f3f4f6;
+        }
+
+        .page-btn.active {
+            background: #111827;
+            color: white;
+            border-color: #111827;
+        }
+
         footer {
             background: #111827;
             color: #9ca3af;
@@ -563,7 +594,7 @@
     <h1>🛒 Môj obchod</h1>
 
     <div class="header-right">
-        <!-- TLAČIDLO NA AKČNÝ LETÁK -->
+        <!-- TLAČIDLO NA AKČNý LETÁK -->
         <a href="/letak" class="flyer-link">🔥 Akčný leták</a>
 
         {% if is_admin %}
@@ -895,6 +926,9 @@
 
     </div>
 
+    <!-- TLAČIDLÁ STRÁNKOVANIA (PAGINATION) -->
+    <div id="paginationContainer" class="pagination"></div>
+
 </main>
 
 <footer>
@@ -922,16 +956,24 @@
 
 <script>
     let activeCategory = 'všetko';
+    let currentPage = 1;
+    let itemsPerPage = 6; // Počet produktov na jednu stranu
 
     function filterCategory(category, btn) {
         activeCategory = category;
+        currentPage = 1; // Pri zmene kategórie preskočíme na 1. stranu
         
-        // Zmena aktívneho tlačidla kategórie
         let buttons = document.querySelectorAll('.filters .filter-btn');
         buttons.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
 
         filterProducts();
+    }
+
+    function changePage(page) {
+        currentPage = page;
+        filterProducts();
+        window.scrollTo({ top: 300, behavior: 'smooth' }); // Jemný posun nahor pri zmene strany
     }
 
     function filterProducts() {
@@ -946,8 +988,8 @@
         let grid = document.getElementById('productsGrid');
         let productsArray = Array.from(grid.querySelectorAll('.product'));
 
-        // 1. Filtrovanie podľa vyhľadávania, kategórie a ceny (Od-Do)
-        productsArray.forEach(product => {
+        // 1. Filtrovanie podľa vyhľadávania, kategórie a ceny
+        let filteredProducts = productsArray.filter(product => {
             let name = product.getAttribute('data-name');
             let category = product.getAttribute('data-category');
             let price = parseFloat(product.getAttribute('data-price'));
@@ -956,17 +998,11 @@
             let matchesCategory = (activeCategory === 'všetko' || category === activeCategory);
             let matchesPrice = (price >= minPrice && price <= maxPrice);
 
-            if (matchesSearch && matchesCategory && matchesPrice) {
-                product.style.display = "flex";
-            } else {
-                product.style.display = "none";
-            }
+            return matchesSearch && matchesCategory && matchesPrice;
         });
 
-        // 2. Triedenie (Sorting) viditeľných produktov
-        let visibleProducts = productsArray.filter(product => product.style.display !== "none");
-
-        visibleProducts.sort((a, b) => {
+        // 2. Triedenie (Sorting)
+        filteredProducts.sort((a, b) => {
             let priceA = parseFloat(a.getAttribute('data-price'));
             let priceB = parseFloat(b.getAttribute('data-price'));
             let nameA = a.getAttribute('data-name');
@@ -974,27 +1010,75 @@
             let stockA = parseInt(a.getAttribute('data-stock'));
             let stockB = parseInt(b.getAttribute('data-stock'));
 
-            if (sortValue === 'price-asc') {
-                return priceA - priceB;
-            } else if (sortValue === 'price-desc') {
-                return priceB - priceA;
-            } else if (sortValue === 'name-asc') {
-                return nameA.localeCompare(nameB);
-            } else if (sortValue === 'name-desc') {
-                return nameB.localeCompare(nameA);
-            } else if (sortValue === 'stock-asc') {
-                return stockA - stockB;
-            } else if (sortValue === 'stock-desc') {
-                return stockB - stockA;
-            }
+            if (sortValue === 'price-asc') return priceA - priceB;
+            if (sortValue === 'price-desc') return priceB - priceA;
+            if (sortValue === 'name-asc') return nameA.localeCompare(nameB);
+            if (sortValue === 'name-desc') return nameB.localeCompare(nameA);
+            if (sortValue === 'stock-asc') return stockA - stockB;
+            if (sortValue === 'stock-desc') return stockB - stockA;
             return 0;
         });
 
-        // Opätovné zoradenie elementov v DOM gribe
-        visibleProducts.forEach(product => {
-            grid.appendChild(product);
-        });
+        // 3. Výpočet stránkovania
+        let totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+        if (currentPage > totalPages && totalPages > 0) {
+            currentPage = totalPages;
+        }
+        if (currentPage < 1) currentPage = 1;
+
+        let startIndex = (currentPage - 1) * itemsPerPage;
+        let endIndex = startIndex + itemsPerPage;
+        let paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+
+        // Skrytie všetkých produktov a zobrazenie len tých pre aktuálnu stranu
+        productsArray.forEach(product => product.style.display = "none");
+        paginatedProducts.forEach(product => product.style.display = "flex");
+
+        // Opätovné zoradenie v DOM gribe
+        filteredProducts.forEach(product => grid.appendChild(product));
+
+        // 4. Vykreslenie tlačidiel stránkovania
+        renderPagination(totalPages);
     }
+
+    function renderPagination(totalPages) {
+        let paginationContainer = document.getElementById('paginationContainer');
+        paginationContainer.innerHTML = '';
+
+        if (totalPages <= 1) return; // Ak je len 1 strana, nezobrazujeme tlačidlá
+
+        // Tlačidlo "Predchádzajúca"
+        if (currentPage > 1) {
+            let prevBtn = document.createElement('button');
+            prevBtn.className = 'page-btn';
+            prevBtn.innerText = '« Predchádzajúca';
+            prevBtn.onclick = () => changePage(currentPage - 1);
+            paginationContainer.appendChild(prevBtn);
+        }
+
+        // Číselné tlačidlá
+        for (let i = 1; i <= totalPages; i++) {
+            let btn = document.createElement('button');
+            btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+            btn.innerText = i;
+            btn.onclick = () => changePage(i);
+            paginationContainer.appendChild(btn);
+        }
+
+        // Tlačidlo "Nasledujúca"
+        if (currentPage < totalPages) {
+            let nextBtn = document.createElement('button');
+            nextBtn.className = 'page-btn';
+            nextBtn.innerText = 'Nasledujúca »';
+            nextBtn.onclick = () => changePage(currentPage + 1);
+            paginationContainer.appendChild(nextBtn);
+        }
+    }
+
+    // Spustenie pri načítaní stránky
+    window.onload = function() {
+        filterProducts();
+    };
 </script>
 </body>
 </html>
