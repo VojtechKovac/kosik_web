@@ -417,7 +417,6 @@ def pridat(request: Request, response: Response, polozka: str = Form(...), mnozs
         aktualny_sklad = produkt.sklad if produkt else 0
     db.close()
 
-    # Ak je to požiadavka cez JavaScript (fetch), vrátime JSON dáta pre Toast
     accept_header = request.headers.get("accept", "")
     if "application/json" in accept_header or request.headers.get("x-requested-with") == "XMLHttpRequest":
         return {
@@ -456,7 +455,36 @@ def upravit(request: Request, response: Response, polozka: str = Form(...), akci
             mnozstvo = kosik.pop(polozka)
             produkt.sklad += mnozstvo
             db.commit()
+
+    # Prepočítanie celkovej ceny košíka a aktuálnych cien
+    aktualne_akcie = generuj_akcie(db)
+    produkty_db = db.query(ProduktModel).all()
+    kategoria_dict = {p.nazov: (p.cena, p.druh, p.sklad, p.povod, p.miesto, p.znacka) for p in produkty_db}
     db.close()
+
+    celkova_cena = 0
+    item_mnozstvo = kosik.get(polozka, 0)
+    item_spolu = 0
+
+    for p_nazov, mnozstvo in kosik.items():
+        if p_nazov in kategoria_dict:
+            cena = aktualne_akcie[p_nazov][0] if p_nazov in aktualne_akcie else kategoria_dict[p_nazov][0]
+            subtotal = cena * mnozstvo
+            celkova_cena += subtotal
+            if p_nazov == polozka:
+                item_spolu = subtotal
+
+    # Ak je to požiadavka cez JavaScript (AJAX), vrátime JSON dáta
+    accept_header = request.headers.get("accept", "")
+    if "application/json" in accept_header or request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return {
+            "success": True,
+            "polozka": polozka,
+            "mnozstvo": item_mnozstvo,
+            "item_spolu": round(item_spolu, 2),
+            "celkova_cena": round(celkova_cena, 2),
+            "kosik_prazdny": len(kosik) == 0
+        }
 
     redir = RedirectResponse("/kosik", status_code=303)
     redir.set_cookie(key="session_id", value=session_id, httponly=True)
@@ -516,7 +544,6 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
     if zlava > 0:
         celkova_cena = celkova_cena * (1 - zlava / 100)
 
-    # ULOŽENIE OBJEDNÁVKY DO DATABÁZY
     if kosik:
         popis_kosika = ", ".join([f"{mnozstvo}x {polozka}" for polozka, mnozstvo in kosik.items()])
         nova_objednavka = ObjednavkaModel(
@@ -535,7 +562,6 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
 
     db.close()
     
-    # Vyprázdnenie košíka po nákupe
     kosik.clear()
 
     return templates.TemplateResponse(
@@ -544,12 +570,10 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
         context={"request": request, "celkova_cena": round(celkova_cena, 2)}
     )
 
-# ENDPOINT PRE PRIDANIE RECENZIE S OCHRANOU PRED HTML/XSS ÚTOKMI
 @app.post("/pridat-recenziu")
 def pridat_recenziu(request: Request, produkt: str = Form(...), hodnotenie: int = Form(...), komentar: str = Form("")):
-    # Kontrola proti HTML značkám a hackom v komentári
     if "<" in komentar or ">" in komentar:
-        raise HTTPException(status_code=400, detail="Komentár nemôže obsahovať HTML znački ani špeciálne znaky!")
+        raise HTTPException(status_code=400, detail="Komentár nemôže obsahovať HTML značky ani špeciálne znaky!")
 
     session_id = request.cookies.get("session_id")
     prihlaseny_zakaznik = aktivne_relacie.get(session_id) if session_id else None
@@ -567,8 +591,6 @@ def pridat_recenziu(request: Request, produkt: str = Form(...), hodnotenie: int 
     
     return RedirectResponse(f"/?sprava={quote('Ďakujeme za tvoje hodnotenie!')}", status_code=303)
 
-
-# ENDPOINT PRE SAMOSTATNÚ STRÁNKU DETAILU PRODUKTU
 @app.get("/produkt/{nazov_produktu}")
 def detail_produktu(request: Request, nazov_produktu: str):
     db = SessionLocal()
@@ -578,10 +600,8 @@ def detail_produktu(request: Request, nazov_produktu: str):
         db.close()
         raise HTTPException(status_code=404, detail="Produkt nebol nájdený")
         
-    # Získame recenzie pre daný produkt z databázy
     recenzie_produktu = db.query(RecenziaModel).filter(RecenziaModel.produkt_nazov == nazov_produktu).all()
     
-    # Výpočet priemeru hodnotení
     priemer = 0
     if recenzie_produktu:
         priemer = round(sum(r.hodnotenie for r in recenzie_produktu) / len(recenzie_produktu), 1)

@@ -3,230 +3,326 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Môj košík</title>
-
+    <title>Nákupný košík – Môj obchod</title>
     <style>
         * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
 
         body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f4f6f8;
-            color: #222;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f0f4f8;
+            color: #1f2937;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
 
         header {
             background: #111827;
             color: white;
-            padding: 22px 7%;
+            padding: 20px 7%;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
         header h1 {
-            margin: 0;
+            font-size: 26px;
         }
 
-        .back {
+        .back-btn {
+            background: #374151;
             color: white;
             text-decoration: none;
-            background: #374151;
             padding: 10px 16px;
-            border-radius: 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .back-btn:hover {
+            background: #4b5563;
         }
 
         main {
             width: 86%;
-            max-width: 1000px;
+            max-width: 900px;
             margin: 40px auto;
+            flex: 1;
         }
 
-        .box {
+        .cart-container {
             background: white;
             padding: 30px;
-            border-radius: 18px;
-            box-shadow: 0 5px 18px rgba(0,0,0,0.07);
-            margin-bottom: 25px;
+            border-radius: 20px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+            border: 1px solid #e5e7eb;
         }
 
-        .item {
+        h2 {
+            font-size: 28px;
+            margin-bottom: 25px;
+            color: #111827;
+        }
+
+        .cart-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        .cart-table th, .cart-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .cart-table th {
+            font-weight: 600;
+            color: #4b5563;
+            background: #f9fafb;
+        }
+
+        .cart-table td {
+            font-size: 15px;
+        }
+
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .qty-btn {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            color: #1f2937;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .qty-btn:hover {
+            background: #111827;
+            color: white;
+            border-color: #111827;
+        }
+
+        .delete-btn {
+            background: #fee2e2;
+            color: #dc2626;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .delete-btn:hover {
+            background: #fecaca;
+        }
+
+        .cart-summary {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 18px 0;
-            border-bottom: 1px solid #eee;
+            background: #f8fafc;
+            padding: 20px 25px;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 25px;
         }
 
-        .item-name {
-            font-size: 19px;
-            font-weight: bold;
-        }
-
-        .quantity {
-            color: #666;
-            margin-top: 5px;
-        }
-
-        .item-price {
-            font-size: 20px;
-            font-weight: bold;
-            color: #16a34a;
-        }
-
-        .total {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 2px solid #eee;
-            font-size: 24px;
-            font-weight: bold;
+        .cart-summary h3 {
+            font-size: 22px;
+            color: #111827;
         }
 
         .total-price {
+            font-size: 26px;
+            font-weight: bold;
             color: #16a34a;
         }
 
-        .coupon {
+        .checkout-box {
+            background: #fff;
+            padding: 20px;
+            border-radius: 14px;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .checkout-form {
             display: flex;
             gap: 10px;
         }
 
-        .coupon input {
+        .checkout-form input {
             flex: 1;
-            padding: 13px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 15px;
+            outline: none;
         }
 
-        button {
-            border: none;
-            border-radius: 8px;
-            padding: 13px 20px;
-            background: #22c55e;
+        .checkout-btn {
+            background: #16a34a;
             color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
+            transition: background 0.2s;
+        }
+        .checkout-btn:hover {
+            background: #15803d;
         }
 
-        button:hover {
-            background: #16a34a;
-        }
-
-        .pay {
-            width: 100%;
-            margin-top: 20px;
+        .empty-cart {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
             font-size: 18px;
         }
 
-        .empty {
+        footer {
+            background: #111827;
+            color: #9ca3af;
+            padding: 30px 7%;
+            margin-top: auto;
             text-align: center;
-            padding: 40px;
+            font-size: 13px;
         }
     </style>
 </head>
-
 <body>
 
 <header>
-    <h1>🛒 Môj košík</h1>
-
-    <a href="/" class="back">
-        ← Späť do obchodu
-    </a>
+    <h1>🛒 Môj obchod – Nákupný košík</h1>
+    <a href="/" class="back-btn">← Späť do obchodu</a>
 </header>
 
 <main>
+    <div class="cart-container">
+        <h2>Tvoj nákupný košík</h2>
 
-    {% if kosik %}
+        {% if kosik %}
+            <table class="cart-table">
+                <thead>
+                    <tr>
+                        <th>Produkt</th>
+                        <th>Cena za ks</th>
+                        <th>Množstvo</th>
+                        <th>Spolu</th>
+                        <th>Akcia</th>
+                    </tr>
+                </thead>
+                <tbody id="cartTableBody">
+                    {% for polozka, mnozstvo in kosik.items() %}
+                        {% set cena = aktualne_akcie[polozka][0] if polozka in aktualne_akcie else kategoria[polozka][0] %}
+                        {% set subtotal = cena * mnozstvo %}
+                        <tr id="cart-row-{{ polozka }}">
+                            <td style="font-weight: 600; text-transform: capitalize;">{{ polozka }}</td>
+                            <td>{{ "%.2f"|format(cena) }} €</td>
+                            <td>
+                                <div class="quantity-controls">
+                                    <button class="qty-btn" onclick="upravMnozstvo('{{ polozka }}', 'odbrat')">-</button>
+                                    <span id="qty-{{ polozka }}" style="font-weight: bold; min-width: 20px; text-align: center;">{{ mnozstvo }}</span>
+                                    <button class="qty-btn" onclick="upravMnozstvo('{{ polozka }}', 'pridat')">+</button>
+                                </div>
+                            </td>
+                            <td id="subtotal-{{ polozka }}" style="font-weight: bold; color: #16a34a;">{{ "%.2f"|format(subtotal) }} €</td>
+                            <td>
+                                <button class="delete-btn" onclick="upravMnozstvo('{{ polozka }}', 'vymazat')">🗑️ Zmazať</button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
 
-    <div class="box">
-
-        <h2>📦 Tvoje produkty</h2>
-
-        {% for polozka, mnozstvo in kosik.items() %}
-
-        <div class="item">
-
-            <div>
-                <div class="item-name">
-                    {{ polozka }}
-                </div>
-
-                <div class="quantity">
-                    Množstvo: {{ mnozstvo }} ks
-                </div>
+            <div class="cart-summary">
+                <h3>Celková suma k úhrade:</h3>
+                <div class="total-price" id="cartTotalPrice">{{ "%.2f"|format(celkova_cena) }} €</div>
             </div>
 
-            <div class="item-price">
-                {{ "%.2f"|format(kategoria[polozka][0] * mnozstvo) }} €
+            <div class="checkout-box">
+                <form action="/zaplatit" method="post" class="checkout-form">
+                    <input type="text" name="kupon" placeholder="Zľavový kupón (nepovinné)">
+                    <button type="submit" class="checkout-btn">💳 Zaplatiť nákup</button>
+                </form>
             </div>
-
-        </div>
-
-        {% endfor %}
-
-        <div class="total">
-            <span>Celkom:</span>
-
-            <span class="total-price">
-                {{ "%.2f"|format(celkova_cena) }} €
-            </span>
-        </div>
-
-    </div>
-
-    <div class="box">
-
-        <h2>🎟️ Zľavový kupón</h2>
-
-        <form action="/zaplatit" method="post">
-
-            <div class="coupon">
-
-                <input
-                    type="text"
-                    name="kupon"
-                    placeholder="Zadaj kód kupónu"
-                >
-
-                <button type="submit">
-                    Použiť
-                </button>
-
+        {% else %}
+            <div id="emptyCartMessage" class="empty-cart">
+                <p>🛒 Tvoj košík je zatiaľ prázdny.</p>
+                <a href="/" class="back-btn" style="display: inline-block; margin-top: 15px;">Začať nakupovať</a>
             </div>
-
-            <button type="submit" class="pay">
-                💳 Zaplatiť
-            </button>
-
-        </form>
-
+        {% endif %}
     </div>
-
-    {% else %}
-
-    <div class="box empty">
-
-        <h2>🛒 Košík je prázdny</h2>
-
-        <p>Zatiaľ si si nevybral žiadny produkt.</p>
-
-        <br>
-
-        <a href="/" class="back">
-            🛍️ Späť do obchodu
-        </a>
-
-    </div>
-
-    {% endif %}
-
 </main>
+
+<footer>
+    Môj obchod © 2026 Všetky práva vyhradené.
+</footer>
+
+<script>
+    async function upravMnozstvo(polozka, akcia) {
+        let formData = new URLSearchParams();
+        formData.append('polozka', polozka);
+        formData.append('akcia', akcia);
+
+        try {
+            let response = await fetch('/upravit', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (response.ok) {
+                let data = await response.json();
+
+                if (data.kosik_prazdny) {
+                    // Ak je košík prázdny, prepíšeme obsah kontajnera
+                    document.querySelector('.cart-container').innerHTML = `
+                        <h2>Tvoj nákupný košík</h2>
+                        <div class="empty-cart">
+                            <p>🛒 Tvoj košík je zatiaľ prázdny.</p>
+                            <a href="/" class="back-btn" style="display: inline-block; margin-top: 15px;">Začať nakupovať</a>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (data.mnozstvo === 0 || akcia === 'vymazat') {
+                    // Odstránenie riadku z tabuľky, ak sa položka vymazala
+                    let row = document.getElementById(`cart-row-${polozka}`);
+                    if (row) row.remove();
+                } else {
+                    // Aktualizácia množstva a čiastkovej ceny pre daný produkt
+                    document.getElementById(`qty-${polozka}`).innerText = data.mnozstvo;
+                    document.getElementById(`subtotal-${polozka}`).innerText = data.item_spolu.toFixed(2) + ' €';
+                }
+
+                // Aktualizácia celkovej sumy košíka
+                document.getElementById('cartTotalPrice').innerText = data.celkova_cena.toFixed(2) + ' €';
+            }
+        } catch (error) {
+            console.error('Chyba pri aktualizácii košíka:', error);
+        }
+    }
+</script>
 
 </body>
 </html>
