@@ -2,16 +2,108 @@
 <html lang="sk">
 <head>
     <meta charset="UTF-8">
-    <title>Platba úspešná</title>
-    <link rel="stylesheet" href="/static/style.css"> <!-- Alebo tvoj štýl -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platba úspešná - Môj obchod</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f0f4f8;
+            color: #1f2937;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .success-box {
+            background: white;
+            padding: 45px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            max-width: 450px;
+            width: 90%;
+            border: 1px solid #e5e7eb;
+        }
+
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #16a34a;
+            font-size: 26px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            color: #4b5563;
+            font-size: 16px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .price-tag {
+            font-size: 22px;
+            font-weight: bold;
+            color: #111827;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn {
+            background: #111827;
+            color: white;
+            text-decoration: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 15px;
+            transition: background 0.2s;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #374151;
+        }
+
+        .btn-invoice {
+            background: #2563eb;
+        }
+        .btn-invoice:hover {
+            background: #1d4ed8;
+        }
+    </style>
 </head>
 <body>
-    <div style="text-align: center; margin-top: 50px;">
-        <h1>Ďakujeme za nákup! 🎉</h1>
-        <p>Vaša platba prebehla úspešne.</p>
-        <p><strong>Celková suma:</strong> {{ celkova_cena }} €</p>
-        <br>
-        <a href="/" style="padding: 10px 20px; background: green; color: white; text-decoration: none; border-radius: 5px;">Späť do obchodu</a>
+
+<div class="success-box">
+    <div class="icon">✅</div>
+    <h2>Platba prebehla úspešne!</h2>
+    <p>Ďakujeme za tvoj nákup. Tvoja objednávka bola úspešne zaznamenaná a pripravená na spracovanie.</p>
+    
+    <div class="price-tag">
+        Zaplatená suma: <strong>{{ "%.2f"|format(celkova_cena) }} €</strong>
     </div>
+
+    <div class="buttons">
+        {% if objednavka_id %}
+            <a href="/faktura/{{ objednavka_id }}" class="btn btn-invoice">📄 Zobraziť a vytlačiť faktúru</a>
+        {% endif %}
+        <a href="/" class="btn">🏠 Späť do obchodu</a>
+    </div>
+</div>
+
 </body>
 </html>

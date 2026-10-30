@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faktúra #{{ objednavka.id }} - Môj obchod</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #ffffff;
+            color: #1f2937;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .invoice-box {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #f3f4f6;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .invoice-header h2 {
+            font-size: 24px;
+            color: #111827;
+            margin-bottom: 5px;
+        }
+
+        .invoice-header p {
+            color: #6b7280;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .invoice-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .invoice-details div div {
+            margin-bottom: 6px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        th {
+            background: #f9fafb;
+            color: #374151;
+            padding: 12px;
+            text-align: left;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .total-section {
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+            color: #16a34a;
+            margin-bottom: 40px;
+        }
+
+        .actions {
+            text-align: center;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .btn {
+            background: #111827;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #374151;
+        }
+
+        .btn-print {
+            background: #2563eb;
+        }
+        .btn-print:hover {
+            background: #1d4ed8;
+        }
+
+        @media print {
+            .actions {
+                display: none;
+            }
+            body {
+                padding: 0;
+            }
+            .invoice-box {
+                border: none;
+                box-shadow: none;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="invoice-box">
+    <div class="invoice-header">
+        <div>
+            <h2>🛒 Môj obchod</h2>
+            <p>Online predaj potravín a tovaru</p>
+        </div>
+        <div style="text-align: right;">
+            <h3 style="color: #2563eb; font-size: 20px; margin-bottom: 5px;">FAKTÚRA</h3>
+            <p><strong>Číslo dokladu:</strong> #{{ objednavka.id }}</p>
+            <p><strong>Dátum vystavenia:</strong> {{ objednavka.datum.strftime('%d.%m.%Y %H:%M') }}</p>
+        </div>
+    </div>
+
+    <div class="invoice-details">
+        <div>
+            <strong>Dodávateľ:</strong>
+            <div>Môj Obchod s.r.o.</div>
+            <div>Obchodná 15, 811 01 Bratislava</div>
+            <div>IČO: 52345678</div>
+        </div>
+        <div>
+            <strong>Zákazník:</strong>
+            <div>{{ objednavka.zakaznik }}</div>
+            <div>Stav: {{ objednavka.stav }}</div>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Položka / Popis objednávky</th>
+                <th style="text-align: right;">Celkom</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>{{ objednavka.polozky }}</td>
+                <td style="text-align: right; font-weight: bold;">{{ "%.2f"|format(objednavka.celkova_cena) }} €</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="total-section">
+        Celková suma na úhradu: {{ "%.2f"|format(objednavka.celkova_cena) }} €
+    </div>
+
+    <div class="actions">
+        <button onclick="window.print()" class="btn btn-print">🖨️ Vytlačiť / Uložiť ako PDF</button>
+        <a href="/" class="btn">🏠 Späť do obchodu</a>
+    </div>
+</div>
+
+</body>
+</html>

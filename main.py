@@ -161,7 +161,6 @@ def domov(request: Request, sprava: str = None):
         for p in produkty_db
     }
     
-    # Načítanie objednávok a registrovaných používateľov pre admina alebo zákazníka
     zoznam_objednavok = []
     zakaznicke_objednavky = []
     registrovani_uzivatelia = {}
@@ -173,7 +172,6 @@ def domov(request: Request, sprava: str = None):
     if prihlaseny_zakaznik:
         zakaznicke_objednavky = db.query(ObjednavkaModel).filter(ObjednavkaModel.zakaznik == prihlaseny_zakaznik).order_by(ObjednavkaModel.datum.desc()).all()
         
-    # Načítanie recenzií a výpočet priemerných hodnotení
     vsetky_recenzie = db.query(RecenziaModel).all()
     recenzie_dict = {}
     priemer_hodnoteni = {}
@@ -317,7 +315,6 @@ def uplatnit_body(request: Request):
         sprava = "Na uplatnenie bodov musíte byť prihlásený."
     return RedirectResponse(f"/?sprava={quote(sprava)}", status_code=303)
 
-# ENDPOINT PRE SPRÁVU BODOV ZÁKAZNÍKA (ADMIN)
 @app.post("/admin-upravit-body")
 def admin_upravit_body(request: Request, email: str = Form(...), zmena_bodov: int = Form(...)):
     is_admin = request.cookies.get("is_admin") == "True"
@@ -583,6 +580,7 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
     if zlava > 0:
         celkova_cena = celkova_cena * (1 - zlava / 100)
 
+    objednavka_id = None
     if kosik:
         popis_kosika = ", ".join([f"{mnozstvo}x {polozka}" for polozka, mnozstvo in kosik.items()])
         nova_objednavka = ObjednavkaModel(
@@ -593,6 +591,8 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
         )
         db.add(nova_objednavka)
         db.commit()
+        db.refresh(nova_objednavka)
+        objednavka_id = nova_objednavka.id
 
     if prihlaseny_zakaznik:
         body_dict = nacitaj_body()
@@ -607,7 +607,29 @@ def zaplatit(request: Request, response: Response, kupon: str = Form("")):
     return templates.TemplateResponse(
         request=request,
         name="platba_uspesna.html",
-        context={"request": request, "celkova_cena": round(celkova_cena, 2)}
+        context={
+            "request": request, 
+            "celkova_cena": round(celkova_cena, 2),
+            "objednavka_id": objednavka_id
+        }
+    )
+
+@app.get("/faktura/{objednavka_id}")
+def zobraz_fakturu(request: Request, objednavka_id: int):
+    db = SessionLocal()
+    objednavka = db.query(ObjednavkaModel).filter(ObjednavkaModel.id == objednavka_id).first()
+    db.close()
+
+    if not objednavka:
+        raise HTTPException(status_code=404, detail="Faktúra / Objednávka nebola nájdená")
+
+    return templates.TemplateResponse(
+        request=request,
+        name="faktura.html",
+        context={
+            "request": request,
+            "objednavka": objednavka
+        }
     )
 
 @app.post("/pridat-recenziu")
